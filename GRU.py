@@ -16,7 +16,7 @@ class GRU_cell(nn.Module):
         self.hidden_size = hidden_size
         self.dilation = dilation
         self.bias = bias
-        self.gate_channels = 3 * self.hidden_size
+        self.gate_channels = 3 * self.hidden_channels
         self.build()
         self.initial()
 
@@ -45,7 +45,7 @@ class GRU_cell(nn.Module):
 
 
 if __name__ == '__main__':
-    test = GRU_cell(in_channels=3, hidden_channels=64, kernel_size=3, stride=2, padding=1, hidden_size=1)
-    x=torch.randn([1,3,9,9])
-    hidden=torch.randn([1,64,5,5])
-    print(test(x,hidden).shape)
+    test = GRU_cell(in_channels=128, hidden_channels=256, kernel_size=3, stride=1, padding=1, hidden_size=3)
+    x = torch.randn([2, 128, 8, 8])
+    hidden = torch.randn([2, 256, 8, 8])
+    print(test(x, hidden).shape)
