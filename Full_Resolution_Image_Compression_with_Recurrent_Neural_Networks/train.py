@@ -11,8 +11,10 @@ from dataset import Dataset
 
 
 def train(args):
-    transform = transforms.Compose([transforms.RandomCrop(32, 32), transforms.ToTensor])
+    model_path = './model'
+    transform = transforms.Compose([transforms.RandomCrop(32, 32), transforms.ToTensor()])
     trainset = Dataset(transform)
+    print("data tot={}".format(trainset.__len__()))
     train_loader = DataLoader(dataset=trainset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
     model_dir = args.log_model_dir
     if not os.path.exists(model_dir):
@@ -29,12 +31,19 @@ def train(args):
     sch = torch.optim.lr_scheduler.MultiStepLR(opt, milestones=[3, 10, 20, 50, 100], gamma=0.5)
     tot = 0
     loss = Loss()
-    for epoch in range(args.epoch):
+    if args.load_epoch > 0:
+        start_epoch = args.load_epoch + 1
+        encoder.load_state_dict(torch.load(os.path.join(model_path, 'encoder_epoch{}.pth'.format(args.load_epoch))))
+        binarizer.load_state_dict(torch.load(os.path.join(model_path, 'binarizer_epoch{}.pth'.format(args.load_epoch))))
+        decoder.load_state_dict(torch.load(os.path.join(model_path, 'decoder_epoch{}.pth'.format(args.load_epoch))))
+    else:
+        start_epoch = 0
+
+    for epoch in range(start_epoch, args.epoch + start_epoch):
         sch.step()
         for id, data in enumerate(train_loader):
             tot += 1
             t0 = time.time()
-            data=torch.randn(data.size(0),3,32,32)
             encoder_h_1 = torch.zeros(data.size(0), 256, 8, 8)
             encoder_h_2 = torch.zeros(data.size(0), 512, 4, 4)
             encoder_h_3 = torch.zeros(data.size(0), 512, 2, 2)
@@ -56,7 +65,7 @@ def train(args):
                     codes, decoder_h_1, decoder_h_2, decoder_h_3, decoder_h_4)
 
                 res = res - output
-                print(res.abs.mean())
+                print(res.abs().mean())
                 loss_sum += res.abs().mean()
             loss_sum /= args.iterations
             loss_sum.backward()
@@ -109,7 +118,6 @@ def train(args):
             """
 
         if epoch % args.snapshot_interval == 0:
-            model_path = './model'
             if not os.path.exists(model_path):
                 os.mkdir(model_path)
             torch.save(encoder.state_dict(), os.path.join(model_path, 'encoder_epoch{}.pth'.format(epoch)))
@@ -126,15 +134,16 @@ if __name__ == "__main__":
     paser = argparse.ArgumentParser()
     paser.add_argument("--root", default="./")
     paser.add_argument("--log_model_dir", default="./log")
-    paser.add_argument("--batch_size", default=25)
+    paser.add_argument("--batch_size", default=5)
     paser.add_argument('--num_workers', default=2)
-    paser.add_argument("--lr", default=0.0001)
+    paser.add_argument("--lr", default=0.00001)
     paser.add_argument("--epoch", default=10)
     paser.add_argument("--evaluate", default=False)
     paser.add_argument("--show_interval", default=1)
     paser.add_argument("--test_interval", default=2)
-    paser.add_argument("--snapshot_interval", default=5)
+    paser.add_argument("--snapshot_interval", default=1)
     paser.add_argument("--iterations", default=16)
+    paser.add_argument("--load_epoch", default=0)
     args = paser.parse_args()
     if not os.path.exists(args.log_model_dir):
         os.mkdir(args.log_model_dir)

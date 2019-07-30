@@ -83,22 +83,23 @@ class Decoder(nn.Module):
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=3, kernel_size=1, stride=1, padding=0, bias=False)
 
     def forward(self, input, hidden1, hidden2, hidden3, hidden4):
+        y=torch.nn.PixelShuffle(2)
         x = self.conv1(input)
         hidden1 = self.rnn1(x, hidden1)
         x = hidden1
-        x = torch.pixel_shuffle(x, 2)
+        x = y(x)
 
         hidden2 = self.rnn2(x, hidden2)
         x = hidden2
-        x = torch.pixel_shuffle(x, 2)
+        x = y(x)
 
         hidden3 = self.rnn3(x, hidden3)
         x = hidden3
-        x = torch.pixel_shuffle(x, 2)
+        x = y(x)
 
         hidden4 = self.rnn4(x, hidden4)
         x = hidden4
-        x = torch.pixel_shuffle(x, 2)
+        x = y(x)
 
         x = torch.tanh(self.conv2(x)) / 2
 
