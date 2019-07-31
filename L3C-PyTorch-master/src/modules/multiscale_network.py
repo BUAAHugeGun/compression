@@ -232,6 +232,7 @@ class MultiscaleNetwork(vis.summarizable_module.SummarizableModule):
         # Visualize input
         # if self._show_input:
         self.summarizer.register_images('train', {'input': x.to(torch.uint8)})
+        auto_recurse=0
         forward_scales = list(range(self.scales)) + [-1 for _ in range(auto_recurse)]
 
         out = Out(targets_style='S' if self._rgb else 'bn',  # IF RGB baseline, use symbols as targets for loss
