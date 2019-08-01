@@ -40,6 +40,7 @@ class IndexImagesDataset(Dataset):
     """
     A Dataset class for images, that also returns the index of the image in the dataset.
     """
+
     @staticmethod
     def to_tensor_uint8_transform():
         """ Convert PIL to uint8 tensor, CHW. """
@@ -57,7 +58,7 @@ class IndexImagesDataset(Dataset):
 
     def copy(self):
         return IndexImagesDataset(
-                self.images_spec, self.to_tensor_transform, self.cache_p, self.min_size)
+            self.images_spec, self.to_tensor_transform, self.cache_p, self.min_size)
 
     def __init__(self, images, to_tensor_transform, fixed_first=None):
         """
@@ -131,6 +132,7 @@ def to_tensor_not_normalized(pic):
 
 class ImagesCached(object):
     """ Caches contents of folders, for slow filesystems. """
+
     def __init__(self, images_spec, cache_p=None, min_size=None):
         """
         :param images_spec: str, interpreted as
@@ -249,6 +251,7 @@ class ImagesCached(object):
                         continue
                     yield p
 
+
 def main():
     # See README
     p = argparse.ArgumentParser()
@@ -295,4 +298,3 @@ def _tensor_to_image(t):
 
 if __name__ == '__main__':
     main()
-

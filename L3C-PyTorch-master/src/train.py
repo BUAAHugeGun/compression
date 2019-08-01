@@ -17,6 +17,7 @@ You should have received a copy of the GNU General Public License
 along with L3C-PyTorch.  If not, see <https://www.gnu.org/licenses/>.
 """
 import torch
+import os
 
 # seed at least the random number generators.
 # doesn't guarantee full reproducability: https://pytorch.org/docs/stable/notes/randomness.html
@@ -40,6 +41,7 @@ from train.trainer import LogConfig
 
 torch.backends.cudnn.benchmark = True
 
+
 def _print_debug_info():
     print('*' * 80)
     print(f'DEVICE == {pe.DEVICE} // PyTorch v{torch.__version__}')
@@ -49,9 +51,12 @@ def _print_debug_info():
 def main(args, configs_dir=DEFAULT_CONFIG_DIR):
     p = argparse.ArgumentParser()
 
-    p.add_argument('ms_config_p', help='Path to a multiscale config, see README')
-    p.add_argument('dl_config_p', help='Path to a dataloader config, see README')
-    p.add_argument('log_dir_root', default='logs', help='All outputs (checkpoints, tensorboard) will be saved here.')
+    p.add_argument('--ms_config_p', default=os.getcwd() + '/configs/ms/cr.cf',
+                   help='Path to a multiscale config, see README')
+    p.add_argument('--dl_config_p', default=os.getcwd() + '/configs/dl/oi.cf',
+                   help='Path to a dataloader config, see README')
+    p.add_argument('--log_dir_root', default=os.getcwd() + '/logs',
+                   help='All outputs (checkpoints, tensorboard) will be saved here.')
     p.add_argument('--temporary', '-t', action='store_true',
                    help='If given, outputs are actually saved in ${LOG_DIR_ROOT}_TMP.')
     p.add_argument('--log_train', '-ltrain', type=int, default=100,
@@ -96,7 +101,6 @@ def main(args, configs_dir=DEFAULT_CONFIG_DIR):
         flags.temporary = True
 
     global_config.add_from_flag(flags.p)
-    print(global_config)
 
     ConfigsRepo(configs_dir).check_configs_available(flags.ms_config_p, flags.dl_config_p)
 
@@ -107,7 +111,6 @@ def main(args, configs_dir=DEFAULT_CONFIG_DIR):
 
     restorer = TrainRestorer.from_flags(flags.restore, flags.log_dir_root, flags.restore_continue, flags.restore_itr,
                                         flags.restore_restart, flags.restore_strict)
-
     trainer = MultiscaleTrainer(flags.ms_config_p, flags.dl_config_p,
                                 flags.log_dir_root + ('_TMP' if flags.temporary else ''),
                                 LogConfig(flags.log_train, flags.log_val, flags.log_train_heavy),

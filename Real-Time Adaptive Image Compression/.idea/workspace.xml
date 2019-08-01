@@ -2,8 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="b5b5cd5b-3745-4fde-9f02-400aa22d4ef1" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/../L3C-PyTorch-master/src/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/../L3C-PyTorch-master/src/test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../L3C-PyTorch-master/src/test/multiscale_tester.py" beforeDir="false" afterPath="$PROJECT_DIR$/../L3C-PyTorch-master/src/test/multiscale_tester.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -29,8 +27,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/encoder.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="403">
-              <caret line="100" column="39" selection-start-line="100" selection-start-column="39" selection-end-line="100" selection-end-column="39" />
+            <state relative-caret-position="365">
+              <caret line="98" column="34" selection-start-line="98" selection-start-column="34" selection-end-line="98" selection-end-column="34" />
               <folding>
                 <element signature="e#0#12#0" expanded="true" />
               </folding>
@@ -222,15 +220,16 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1564477053922</updated>
-      <workItem from="1564477054980" duration="22055000" />
+      <workItem from="1564477054980" duration="22914000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="22055000" />
+    <option name="totallyTimeSpent" value="22914000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1985" y="-4" width="1855" height="1084" extended-state="6" />
+    <editor active="true" />
     <layout>
       <window_info id="Favorites" side_tool="true" />
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.24958494" />
@@ -303,8 +302,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/encoder.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="403">
-          <caret line="100" column="39" selection-start-line="100" selection-start-column="39" selection-end-line="100" selection-end-column="39" />
+        <state relative-caret-position="365">
+          <caret line="98" column="34" selection-start-line="98" selection-start-column="34" selection-end-line="98" selection-end-column="34" />
           <folding>
             <element signature="e#0#12#0" expanded="true" />
           </folding>

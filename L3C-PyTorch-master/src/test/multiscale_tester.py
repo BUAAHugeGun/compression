@@ -44,9 +44,7 @@ from test.image_saver import ImageSaver
 # used for the Shared RGB basline
 _DEFAULT_RECURSIVE_FOR_RGB = 3
 
-
 _FILE_EXT = '.l3c'
-
 
 _CLEAN_CACHE_PERIODICALLY = int(os.environ.get('CUDA_CLEAN_CACHE', '0')) == 1
 
@@ -114,7 +112,6 @@ class TestResult(object):
         return np.mean(list(self.per_img_results.values()))
 
 
-
 def _parse_recursive_flag(recursive, config_ms):
     if not config_ms.rgb_bicubic_baseline:
         return 0
@@ -131,10 +128,10 @@ def _clean_cuda_cache(i):
     if i % 25 == 0 and torch.cuda.is_available():
         print()
         print('{:,} {:,} {:,} {:,}'.format(
-                torch.cuda.max_memory_allocated(),
-                torch.cuda.memory_allocated(),
-                torch.cuda.max_memory_cached(),
-                torch.cuda.memory_cached()))
+            torch.cuda.max_memory_allocated(),
+            torch.cuda.memory_allocated(),
+            torch.cuda.max_memory_cached(),
+            torch.cuda.memory_cached()))
         torch.cuda.empty_cache()
 
 
@@ -165,7 +162,8 @@ class MultiscaleTester(object):
         (self.config_ms, _), _ = ft.unzip(map(config_parser.parse, config_ps))
         global_config.update_config(self.config_ms)
 
-        self.recursive = _parse_recursive_flag(self.flags.recursive, config_ms=self.config_ms)
+        self.recursive = _parse_recursive_flag(self.flags.recursive,
+                                               config_ms=self.config_ms)  # _parse_recursive_flag(self.flags.recursive, config_ms=self.config_ms)
         if self.flags.write_to_files and self.recursive:
             raise NotImplementedError('--write_to_file not implemented for --recursive')
 
@@ -182,7 +180,7 @@ class MultiscaleTester(object):
 
         # test_log_dir/0311_1057 cr oi_012
         self.test_log_dir = os.path.join(
-                test_log_dir_root, os.path.basename(experiment_dir))
+            test_log_dir_root, os.path.basename(experiment_dir))
         if self.flags.reset_entire_cache and os.path.isdir(self.test_log_dir):
             print(f'Removing test_log_dir={self.test_log_dir}...')
             time.sleep(1)
@@ -209,7 +207,7 @@ class MultiscaleTester(object):
     def get_configs_experiment_dir(prefix, log_dir, log_date):
         experiment_dir = paths.get_experiment_dir(log_dir, log_date)
         log_dir_comps = logdir_helpers.parse_log_dir(
-                experiment_dir, DEFAULT_CONFIG_DIR, [prefix, 'dl'], append_ext='.cf')
+            experiment_dir, DEFAULT_CONFIG_DIR, [prefix, 'dl'], append_ext='.cf')
         config_ps = log_dir_comps.config_paths
         global_config.add_from_flag(log_dir_comps.postfix)
         return config_ps, experiment_dir
@@ -246,8 +244,8 @@ class MultiscaleTester(object):
             print('*** WARN: Cropping to {}'.format(self.flags.crop))
             to_tensor_transform.insert(0, transforms.CenterCrop(self.flags.crop))
         return IndexImagesDataset(
-                testset,
-                to_tensor_transform=transforms.Compose(to_tensor_transform))
+            testset,
+            to_tensor_transform=transforms.Compose(to_tensor_transform))
 
     def _test(self, ds):
         # If we write to file, we do not store any TestResult
@@ -391,16 +389,15 @@ class MultiscaleTester(object):
         # Make sure folder does not already contain samples for this file.
         if image_saver.file_starting_with_exists(save_prefix):
             raise FileExistsError('Previous sample outputs found in {}. Please remove.'.format(
-                    image_saver.out_dir))
+                image_saver.out_dir))
         # Store ground truth for comparison
         image_saver.save_img(img_batch, '{}_{:.3f}_gt.png'.format(save_prefix, sum(bpsps)))
-        for style, sample_scales in (('rgb', []),               # Sample RGB scale (final scale)
-                                     ('rgb+bn0', [0]),          # Sample RGB + z^(1)
+        for style, sample_scales in (('rgb', []),  # Sample RGB scale (final scale)
+                                     ('rgb+bn0', [0]),  # Sample RGB + z^(1)
                                      ('rgb+bn0+bn1', [0, 1])):  # Sample RGB + z^(1) + z^(2)
             sampled = self.blueprint.sample_forward(img_batch, sample_scales)
             bpsp_sample = sum(bpsps[len(sample_scales) + 1:])
             image_saver.save_img(sampled, '{}_{}_{:.3f}.png'.format(save_prefix, style, bpsp_sample))
-
 
 
 def _print(s, oneline, final=False):
@@ -411,5 +408,3 @@ def _print(s, oneline, final=False):
             print('\n' + s)
     else:
         print(s)
-
-

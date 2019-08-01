@@ -45,7 +45,6 @@ from distutils.version import LooseVersion
 from torch.utils.cpp_extension import CppExtension, BuildExtension, CUDAExtension
 import os
 
-
 MODULE_BASE_NAME = 'torchac_backend'
 
 
@@ -81,13 +80,13 @@ def get_extension(cuda_support):
             print(_bold_warn_str('***WARN') + ': Found untested nvcc {}'.format(nvcc_version))
 
         return CUDAExtension(
-                MODULE_BASE_NAME + '_gpu',
-                prefixed(prefix, ['torchac.cpp', 'torchac_kernel.cu']),
-                define_macros=[('COMPILE_CUDA', '1')])
+            MODULE_BASE_NAME + '_gpu',
+            prefixed(prefix, ['torchac.cpp', 'torchac_kernel.cu']),
+            define_macros=[('COMPILE_CUDA', '1')])
     else:
         return CppExtension(
-                MODULE_BASE_NAME + '_cpu',
-                prefixed(prefix, ['torchac.cpp']))
+            MODULE_BASE_NAME + '_cpu',
+            prefixed(prefix, ['torchac.cpp']))
 
 
 def _supported_compilers_available():
