@@ -46,8 +46,8 @@ class Encoder(nn.Module):
             f2 = self._conv_layer(c[i] // 2, c[i], 3, 1, 1)
             self.f.append(nn.Sequential(f1, f2))
         for i in range(3, self.M):
-            f1 = self._conv_layer(3, c[i] // 2, 1, 1, 0)
-            f2 = self._conv_layer(c[i] // 2, c[i], 1, 1, 0)
+            f1 = self._conv_layer(3, c[i] // 2, 3, 1, 1)
+            f2 = self._conv_layer(c[i] // 2, c[i], 3, 1, 1)
             self.f.append(nn.Sequential(f1, f2))
         self.g.append(self._conv_layer(c[0], 16, 5, 4, 1))
         self.g.append(self._conv_layer(c[1], 16, 3, 2, 1))
@@ -56,23 +56,9 @@ class Encoder(nn.Module):
         self.g.append(self._deconv_layer(c[4], 16, 3, 2, 1))
         self.g.append(self._deconv_layer(c[5], 16, 5, 4, 1))
         self.G = self._conv_layer(96, 96, 3, 1, 1)
-        self.d0 = self.d[0]
-        self.d1 = self.d[1]
-        self.d2 = self.d[2]
-        self.d3 = self.d[3]
-        self.d4 = self.d[4]
-        self.f0 = self.f[0]
-        self.f1 = self.f[1]
-        self.f2 = self.f[2]
-        self.f3 = self.f[3]
-        self.f4 = self.f[4]
-        self.f5 = self.f[5]
-        self.g0 = self.g[0]
-        self.g1 = self.g[1]
-        self.g2 = self.g[2]
-        self.g3 = self.g[3]
-        self.g4 = self.g[4]
-        self.g5 = self.g[5]
+        self.d_list = nn.Sequential(*self.d)
+        self.f_list = nn.Sequential(*self.f)
+        self.g_list = nn.Sequential(*self.g)
 
     def initial(self, scale_factor=1.0, mode="FAN_IN"):
         if mode != "FAN_IN" and mode != "FAN_out":
@@ -103,6 +89,6 @@ class Encoder(nn.Module):
 
 
 if __name__ == '__main__':
-    x = torch.randn(2, 3, 512, 512)
+    x = torch.randn(2, 3, 32, 32)
     test = Encoder(3)
     print(test(x).shape)

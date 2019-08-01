@@ -113,8 +113,8 @@ class TestResult(object):
 
 
 def _parse_recursive_flag(recursive, config_ms):
-    if not config_ms.rgb_bicubic_baseline:
-        return 0
+    #if not config_ms.rgb_bicubic_baseline:
+    #    return 0
     if recursive == 'auto':
         if config_ms.rgb_bicubic_baseline and config_ms.num_scales == 1:  # RGB - shared
             return _DEFAULT_RECURSIVE_FOR_RGB
@@ -162,8 +162,10 @@ class MultiscaleTester(object):
         (self.config_ms, _), _ = ft.unzip(map(config_parser.parse, config_ps))
         global_config.update_config(self.config_ms)
 
+        self.flags.recursive=1
         self.recursive = _parse_recursive_flag(self.flags.recursive,
                                                config_ms=self.config_ms)  # _parse_recursive_flag(self.flags.recursive, config_ms=self.config_ms)
+        print(self.recursive)
         if self.flags.write_to_files and self.recursive:
             raise NotImplementedError('--write_to_file not implemented for --recursive')
 
