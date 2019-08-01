@@ -2,8 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="b5b5cd5b-3745-4fde-9f02-400aa22d4ef1" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/../L3C-PyTorch-master/src/modules/multiscale_network.py" beforeDir="false" afterPath="$PROJECT_DIR$/../L3C-PyTorch-master/src/modules/multiscale_network.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../L3C-PyTorch-master/src/torchac/torchac_backend/torchac.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../L3C-PyTorch-master/src/torchac/torchac_backend/torchac.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../L3C-PyTorch-master/src/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/../L3C-PyTorch-master/src/test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../L3C-PyTorch-master/src/test/multiscale_tester.py" beforeDir="false" afterPath="$PROJECT_DIR$/../L3C-PyTorch-master/src/test/multiscale_tester.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -117,6 +118,7 @@
     </panes>
   </component>
   <component name="PropertiesComponent">
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/../L3C-PyTorch-master" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />

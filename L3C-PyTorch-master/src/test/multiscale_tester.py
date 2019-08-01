@@ -165,7 +165,7 @@ class MultiscaleTester(object):
         (self.config_ms, _), _ = ft.unzip(map(config_parser.parse, config_ps))
         global_config.update_config(self.config_ms)
 
-        self.recursive = None#_parse_recursive_flag(self.flags.recursive, config_ms=self.config_ms)
+        self.recursive = _parse_recursive_flag(self.flags.recursive, config_ms=self.config_ms)
         if self.flags.write_to_files and self.recursive:
             raise NotImplementedError('--write_to_file not implemented for --recursive')
 

@@ -33,14 +33,15 @@ from dataloaders.images_loader import resize_bicubic_batch
 from modules import edsr
 from modules.quantizer import Quantizer
 
-EncOut = namedtuple('EncOut', ['bn',  # NCH'W'
+EncOut = namedtuple('EncOut', ['bn',    # NCH'W'
                                'bn_q',  # quantized bn, NCH'W'
-                               'S',  # NCH'W', long
-                               'L',  # int
-                               'F'  # NCfH'W', float, before Q
+                               'S',     # NCH'W', long
+                               'L',     # int
+                               'F'      # NCfH'W', float, before Q
                                ])
-DecOut = namedtuple('DecOut', ['F',  # NCfHW
+DecOut = namedtuple('DecOut', ['F',     # NCfHW
                                ])
+
 
 conv = pe.default_conv
 
@@ -66,7 +67,7 @@ class BicubicDownsamplingEnc(vis.summarizable_module.SummarizableModule):
         super(BicubicDownsamplingEnc, self).__init__()
         # TODO: ugly
         self.rgb_mean = torch.tensor(
-            [0.4488, 0.4371, 0.4040], dtype=torch.float32).reshape(3, 1, 1).mul(255.).to(pe.DEVICE)
+                [0.4488, 0.4371, 0.4040], dtype=torch.float32).reshape(3, 1, 1).mul(255.).to(pe.DEVICE)
 
     def forward(self, x):
         x = x + self.rgb_mean  # back to 0...255
@@ -163,7 +164,7 @@ class EDSRDec(nn.Module):
             edsr.ResBlock(conv, Cf, kernel_size, act=nn.ReLU(True))
             for _ in range(n_resblock)
         ]
-
+        
         m_body.append(conv(Cf, Cf, kernel_size))
         self.body = nn.Sequential(*m_body)
         self.tail = edsr.Upsampler(conv, 2, Cf, act=False)
@@ -180,3 +181,5 @@ class EDSRDec(nn.Module):
         x = self.tail(x)
         # TODO: To support nn.DataParallel, this must be changed, as it not a tensor
         return DecOut(x)
+
+

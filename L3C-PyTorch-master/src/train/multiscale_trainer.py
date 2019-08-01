@@ -45,7 +45,7 @@ class MultiscaleTrainer(Trainer):
                  ms_config_p, dl_config_p,
                  log_dir_root, log_config: LogConfig,
                  num_workers,
-                 saver: Saver, restorer: TrainRestorer = None,
+                 saver: Saver, restorer: TrainRestorer=None,
                  sw_cls=vis.safe_summary_writer.SafeSummaryWriter):
         """
         :param ms_config_p: Path to the multiscale config file, see README
@@ -86,7 +86,7 @@ class MultiscaleTrainer(Trainer):
             print('Skipping to {}...'.format(skip_to_itr))
         # Create LR schedule to update parameters
         self.lr_schedule = lr_schedule.from_spec(
-            self.config_ms.lr.schedule, self.config_ms.lr.initial, [self.optim], epoch_len=len(dl_train))
+                self.config_ms.lr.schedule, self.config_ms.lr.initial, [self.optim], epoch_len=len(dl_train))
 
         # --- All nn.Modules are setup ---
         print('-' * 80)
@@ -97,6 +97,7 @@ class MultiscaleTrainer(Trainer):
         self.ckpt_dir = os.path.join(self.log_dir, CKPTS_DIR_NAME)
         print(f'Checkpoints will be saved to {self.ckpt_dir}')
         saver.set_out_dir(self.ckpt_dir)
+
 
         # Create summary writer
         sw = sw_cls(self.log_dir)
@@ -116,33 +117,33 @@ class MultiscaleTrainer(Trainer):
         assert self.config_dl.train_imgs_glob is not None
         print('Cropping to {}'.format(self.config_dl.crop_size))
         to_tensor_transform = transforms.Compose(
-            [transforms.RandomCrop(self.config_dl.crop_size),
-             transforms.RandomHorizontalFlip(),
-             images_loader.IndexImagesDataset.to_tensor_uint8_transform()])
+                [transforms.RandomCrop(self.config_dl.crop_size),
+                 transforms.RandomHorizontalFlip(),
+                 images_loader.IndexImagesDataset.to_tensor_uint8_transform()])
         # NOTE: if there are images in your training set with dimensions <128, training will abort at some point,
         # because the cropper failes. See REAME, section about data preparation.
         min_size = self.config_dl.crop_size
         ds_train = images_loader.IndexImagesDataset(
-            images=images_loader.ImagesCached(
-                self.config_dl.train_imgs_glob,
-                self.config_dl.image_cache_pkl,
-                min_size=min_size),
-            to_tensor_transform=to_tensor_transform)
+                images=images_loader.ImagesCached(
+                        self.config_dl.train_imgs_glob,
+                        self.config_dl.image_cache_pkl,
+                        min_size=min_size),
+                to_tensor_transform=to_tensor_transform)
 
         dl_train = DataLoader(ds_train, self.config_dl.batchsize_train, shuffle=shuffle_train,
                               num_workers=num_workers)
         print('Created DataLoader [train] {} batches -> {} imgs'.format(
-            len(dl_train), self.config_dl.batchsize_train * len(dl_train)))
+                len(dl_train), self.config_dl.batchsize_train * len(dl_train)))
 
         ds_val = self._get_ds_val(
-            self.config_dl.val_glob,
-            crop=self.config_dl.crop_size,
-            truncate=self.config_dl.num_val_batches * self.config_dl.batchsize_val)
+                self.config_dl.val_glob,
+                crop=self.config_dl.crop_size,
+                truncate=self.config_dl.num_val_batches * self.config_dl.batchsize_val)
         dl_val = DataLoader(
-            ds_val, self.config_dl.batchsize_val, shuffle=False,
-            num_workers=num_workers, drop_last=True)
+                ds_val, self.config_dl.batchsize_val, shuffle=False,
+                num_workers=num_workers, drop_last=True)
         print('Created DataLoader [val] {} batches -> {} imgs'.format(
-            len(dl_val), self.config_dl.batchsize_train * len(dl_val)))
+                len(dl_val), self.config_dl.batchsize_train * len(dl_val)))
 
         return dl_train, dl_val
 
@@ -158,11 +159,11 @@ class MultiscaleTrainer(Trainer):
             fixed_first = None
 
         ds = images_loader.IndexImagesDataset(
-            images=images_loader.ImagesCached(
-                images_spec, self.config_dl.image_cache_pkl,
-                min_size=self.config_dl.val_glob_min_size),
-            to_tensor_transform=img_to_tensor_t,
-            fixed_first=fixed_first)  # fix a first image to have consistency in tensor board
+                images=images_loader.ImagesCached(
+                        images_spec, self.config_dl.image_cache_pkl,
+                        min_size=self.config_dl.val_glob_min_size),
+                to_tensor_transform=img_to_tensor_t,
+                fixed_first=fixed_first)  # fix a first image to have consistency in tensor board
 
         if truncate:
             ds = pe.TruncatedDataset(ds, num_elemens=truncate)
@@ -202,7 +203,7 @@ class MultiscaleTrainer(Trainer):
         imgs_per_second = self.config_dl.batchsize_train / mean_time_per_batch
 
         print('{} {: 6d}: {} // {:.3f} img/s '.format(
-            self.log_date, i, values.get_str(), imgs_per_second) + (load_time or ''))
+                self.log_date, i, values.get_str(), imgs_per_second) + (load_time or ''))
 
         values.write(self.sw, i)
 
@@ -242,7 +243,7 @@ class MultiscaleTrainer(Trainer):
 
         val_duration = time.time() - val_start
         num_imgs = len(self.dl_val.dataset)
-        time_per_img = val_duration / num_imgs
+        time_per_img = val_duration/num_imgs
 
         output_strs = bs.output_summaries()
         output_strs = ['{: 6d}'.format(i)] + output_strs + ['({:.3f} s/img)'.format(time_per_img)]
@@ -256,7 +257,6 @@ class Values(object):
     Stores values during one training step. Essentially a thin wrapper around dict with support to get a nicely
     formatted string and write to a SummaryWriter.
     """
-
     def __init__(self, fmt_str='{:.3f}', joiner=' / ', prefix='train/'):
         self.fmt_str = fmt_str
         self.joiner = joiner

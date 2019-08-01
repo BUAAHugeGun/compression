@@ -32,7 +32,6 @@ from fjcommon.assertions import assert_exc
 
 class _CheckpointTracker(object):
     """ out_dir is usally set via set_out_dir """
-
     def __init__(self, out_dir=None, ckpt_name_fmt='ckpt_{:010d}.pt', tmp_postfix='.tmp'):
         assert len(tmp_postfix)
         assert '.' in tmp_postfix
@@ -111,6 +110,7 @@ class _CheckpointTracker(object):
         return itr_part_digits_only
 
 
+
 class Saver(_CheckpointTracker):
     """
     Saves ckpts:
@@ -124,7 +124,6 @@ class Saver(_CheckpointTracker):
         In addition to C being kept, the last `keep_tmp_last` temporary checkpoints before C are also kept.
         This means that always `keep_tmp_last` more checkpoints are kept than if keep_tmp_last=None
     """
-
     def __init__(self,
                  keep_tmp_itr: int, keep_every=10, keep_tmp_last=None,
                  out_dir=None, ckpt_name_fmt='ckpt_{:010d}.pt', tmp_postfix='.tmp',
@@ -174,7 +173,7 @@ class Saver(_CheckpointTracker):
         current_ckpt_p_non_tmp = current_ckpt_p.replace(self.tmp_postfix, '')
         self.print('{} -> {}'.format(basename(current_ckpt_p), basename(current_ckpt_p_non_tmp)))
         os.rename(current_ckpt_p, current_ckpt_p_non_tmp)
-        keep_tmp_last = self.get_all_ckpts()[-(self.keep_tmp_last + 1):] if self.keep_tmp_last else []
+        keep_tmp_last = self.get_all_ckpts()[-(self.keep_tmp_last+1):] if self.keep_tmp_last else []
         for p in self.get_all_ckpts():
             if self.tmp_postfix in p and p not in keep_tmp_last:
                 self.print('Removing {}...'.format(basename(p)))
@@ -203,3 +202,6 @@ class Restorer(_CheckpointTracker):
                     print(n, module)
                 raise e
         return self.get_itr_from_ckpt_p(ckpt_p)
+
+
+
