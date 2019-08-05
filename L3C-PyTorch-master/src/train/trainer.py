@@ -38,6 +38,7 @@ import itertools
 
 from train.train_restorer import TrainRestorer
 
+
 LogConfig = namedtuple('LogConfig', ['log_train', 'log_val', 'log_train_heavy'])
 
 
@@ -57,7 +58,6 @@ class TimedIterator(object):
 # TODO: allow "restart last epoch" or sth
 class TrainingSetIterator(object):
     """ Implements skipping to a certain iteration """
-
     def __init__(self, skip_to_itr, dl_train):
         self.skip_to_itr = skip_to_itr
         self.dl_train = dl_train
@@ -95,7 +95,7 @@ class AbortTrainingException(Exception):
 
 class Trainer(object):
     def __init__(self, dl_train, dl_val, optims, net, sw: vis.safe_summary_writer.SafeSummaryWriter,
-                 max_epochs, log_config: LogConfig, saver: Saver = None, skip_to_itr=None):
+                 max_epochs, log_config: LogConfig, saver: Saver=None, skip_to_itr=None):
 
         assert isinstance(optims, list)
 
@@ -113,7 +113,7 @@ class Trainer(object):
     def continue_from(self, ckpt_dir):
         pass
 
-    def strain(self):
+    def train(self):
         log_train, log_val, log_train_heavy = self.log_config
 
         dl_train_it = TrainingSetIterator(self.skip_to_itr, self.dl_train)
@@ -133,8 +133,7 @@ class Trainer(object):
                     self.train_step(i, img_batch,
                                     log=should_log,
                                     log_heavy=should_log_heavy,
-                                    load_time='[{:.2e} s/batch load]'.format(
-                                        t.t.mean_time_spent()) if should_log else None)
+                                    load_time='[{:.2e} s/batch load]'.format(t.t.mean_time_spent()) if should_log else None)
                     self.saver.save(self.modules_to_save(), i)
 
                     if i > 0 and i % log_val == 0:
@@ -164,6 +163,9 @@ class Trainer(object):
 
     def modules_to_save(self):
         """ used to save and restore. Should return a dictionary module_name -> nn.Module """
+        raise NotImplementedError()
+
+    def train_step(self, i, img_batch, log, log_heavy, load_time=None):
         raise NotImplementedError()
 
     def validation_loop(self, i):
@@ -225,7 +227,7 @@ class Trainer(object):
     def get_log_dir(log_dir_root, rel_paths, restorer, strip_ext='.cf'):
         if not restorer or not restorer.restore_continue:
             log_dir = logdir_helpers.create_unique_log_dir(
-                rel_paths, log_dir_root, strip_ext=strip_ext, postfix=global_config.values())
+                    rel_paths, log_dir_root, strip_ext=strip_ext, postfix=global_config.values())
             print('Created {}...'.format(log_dir))
         else:
             log_dir = restorer.get_log_dir()
@@ -240,3 +242,4 @@ def _print_unused_global_config(ignore=None):
     unused = [u for u in global_config.get_unused_params() if u not in ignore]
     if unused:
         raise ValueError('Unused params:\n- ' + '\n- '.join(unused))
+

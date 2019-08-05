@@ -47,6 +47,7 @@ from modules.head import RGBHead, Head
 from modules.net import Net, EncOut
 from modules.prob_clf import AtrousProbabilityClassifier
 
+
 conv = pe.default_conv
 
 
@@ -54,7 +55,6 @@ class Out(object):
     """
     Stores outputs of network, see notes in __init__.
     """
-
     def __init__(self, targets_style='S', auto_recursive_from=None):
         """
         :param targets_style: has to be 'S' or 'bn'. If 'S', the predictor predicts symbols, otherwise bottlenecks.
@@ -74,10 +74,10 @@ class Out(object):
 
         assert targets_style in ('S', 'bn'), targets_style
 
-        self.S = []  # from fine to coarse, NCHW, sybmols; S[0] = RGB image
-        self.L = []  # from fine to coarse, [int], number of symbols of S[i]; S[0] = 256
+        self.S = []   # from fine to coarse, NCHW, sybmols; S[0] = RGB image
+        self.L = []   # from fine to coarse, [int], number of symbols of S[i]; S[0] = 256
         self.bn = []  # from fine to coarse, NCHW actual bottleneck, floats; bn[0] = None
-        self.P = []  # from fine to coarse, NLCHW, predcitions; P[-1] is uniform.
+        self.P = []   # from fine to coarse, NLCHW, predcitions; P[-1] is uniform.
         #                   P[0] predicts S[0], P[i] predicts bn[i]/S[i] (depending if targets is 'S' or 'bn')
 
         # Invariant:
@@ -127,20 +127,20 @@ class Out(object):
         assert len(self.S) == len(self.L) == len(self.P) + 1
         N, C, H, W = self.S[i].shape
         L = self.L[i]
-        return N * C * H * W * np.log(L)
+        return N*C*H*W*np.log(L)
 
 
 class Losses(vis.summarizable_module.SummarizableModule):
     def __init__(self, config_ms):
         super(Losses, self).__init__()
         self.loss_dmol_rgb = DiscretizedMixLogisticLoss(
-            rgb_scale=True, x_min=0, x_max=255, L=256)
+                rgb_scale=True, x_min=0, x_max=255, L=256)
         if config_ms.rgb_bicubic_baseline:
             self.loss_dmol_n = self.loss_dmol_rgb
         else:
             x_min, x_max = config_ms.q.levels_range
             self.loss_dmol_n = DiscretizedMixLogisticLoss(
-                rgb_scale=False, x_min=x_min, x_max=x_max, L=config_ms.q.L)
+                    rgb_scale=False, x_min=x_min, x_max=x_max, L=config_ms.q.L)
 
     def get(self, out: Out):
         """
@@ -154,7 +154,7 @@ class Losses(vis.summarizable_module.SummarizableModule):
         # for L3C: target_i == bottlenecks
         costs = [loss(target_i, P_i, scale).sum()
                  for scale, (loss, target_i, P_i) in enumerate(out.iter_targets_and_predictions(
-                loss_rgb=self.loss_dmol_rgb, loss_others=self.loss_dmol_n))]
+                    loss_rgb=self.loss_dmol_rgb, loss_others=self.loss_dmol_n))]
 
         # Note: S[1] predicts P[0]
         # Final scale that is not autorecursive (usually just the final scale, if we do not apply auto-recursion).
@@ -215,7 +215,7 @@ class MultiscaleNetwork(vis.summarizable_module.SummarizableModule):
         self.prob_clfs = nn.ModuleList(prob_clfs)  # len == #scales
 
         self.extra_repr_str = 'scales={} / {} nets / {} ps'.format(
-            self.scales, len(self.nets), len(self.prob_clfs))
+                self.scales, len(self.nets), len(self.prob_clfs))
 
     def get_losses(self):
         return Losses(self.config_ms)
@@ -232,7 +232,6 @@ class MultiscaleNetwork(vis.summarizable_module.SummarizableModule):
         # Visualize input
         # if self._show_input:
         self.summarizer.register_images('train', {'input': x.to(torch.uint8)})
-        auto_recurse=0
         forward_scales = list(range(self.scales)) + [-1 for _ in range(auto_recurse)]
 
         out = Out(targets_style='S' if self._rgb else 'bn',  # IF RGB baseline, use symbols as targets for loss
@@ -289,8 +288,8 @@ class MultiscaleNetwork(vis.summarizable_module.SummarizableModule):
             enc_out = enc_outs[i]
 
             #                                       # do not fuse features from lower scale if:
-            if (not self._fuse_feat or  # disabled
-                    scale == -1 or  # autoregressive scale
+            if (not self._fuse_feat or              # disabled
+                    scale == -1 or                  # autoregressive scale
                     scale == max(forward_scales)):  # final scale
                 features_to_fuse = None
             else:
@@ -322,7 +321,9 @@ class MultiscaleNetwork(vis.summarizable_module.SummarizableModule):
         dec_out = net.dec(bn_q, features_to_fuse)
         return prob_clf(dec_out.F), dec_out.F
 
+
     # Sampling -----------------------------------------------------------------------
+
 
     def sample_forward(self, x, losses: Losses, sample_scales, partial_final=None, auto_recurse=0):
         """
@@ -411,3 +412,4 @@ def _to_set_assert_unique(l):
     s = set(l)
     assert len(s) == n, '{} != {}'.format(len(s), n)
     return s
+

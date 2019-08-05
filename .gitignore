@@ -1,2 +1,8 @@
 /L3C-PyTorch-master/src/logs
 /L3C-PyTorch-master/src/logs_test
+./Real-Time\ Adaptive\ Image\ Compression/logs
+*.pth
+*.jpg
+*.jpeg
+*.png
+*.l3c

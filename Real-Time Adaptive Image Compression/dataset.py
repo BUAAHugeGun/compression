@@ -26,13 +26,14 @@ class Dataset(dataset):
 
     def __getitem__(self, item):
         img = cv2.imread(self.images[item])
-        # img = np.transpose(img, [2, 0, 1])[:, 0:10, 0:10]
+        # img = cv2.imread('../../test.jpeg')
+        # img = np.transpose(img, [2, 0, 1])[:, 0:64, 0:64]
         while img.shape[0] < 128:
             img = np.concatenate([img, img], 0)
         while img.shape[1] < 128:
             img = np.concatenate([img, img], 1)
         H, W = img.shape[0] - 128, img.shape[1] - 128
-        h, w = random.randint(0, H - 1), random.randint(0, W - 1)
+        h, w = random.randint(0, H), random.randint(0, W)
         img = img[h:h + 128, w:w + 128, :]
         return self.transform(img)
 

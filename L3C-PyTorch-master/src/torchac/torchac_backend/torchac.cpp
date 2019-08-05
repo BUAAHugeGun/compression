@@ -32,8 +32,6 @@
 #include <bitset>
 
 
-
-
 using cdf_t = uint16_t;
 
 /** Encapsulates a pointer to a CDF tensor */

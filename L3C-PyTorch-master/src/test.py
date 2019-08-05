@@ -30,7 +30,6 @@ we just print that (see TestID in multiscale_tester.py).
 """
 
 import torch.backends.cudnn
-
 torch.backends.cudnn.benchmark = True
 
 import argparse
@@ -39,6 +38,7 @@ from operator import itemgetter
 from helpers.aligned_printer import AlignedPrinter
 from helpers.testset import Testset
 from test.multiscale_tester import MultiscaleTester
+
 
 
 def main():
@@ -97,8 +97,7 @@ def main():
     flags = p.parse_args()
 
     if flags.compare_theory and not flags.write_to_files:
-        if flags.compare_theory and not flags.write_to_files:
-            raise ValueError('Cannot have --compare_theory without --write_to_files.')
+        raise ValueError('Cannot have --compare_theory without --write_to_files.')
     if flags.write_to_files and flags.sample:
         raise ValueError('Cannot have --write_to_files and --sample.')
     if flags.time_report and not flags.write_to_files:
@@ -135,7 +134,7 @@ def main():
             sortby = {'testset': 0, 'exp': 1, 'itr': 2, 'res': 3}[flags.sort_output]
             a.append('Testset', 'Experiment', 'Itr', 'Result')
             for testset, log_date, restore_itr, result in sorted(results, key=itemgetter(sortby)):
-                a.append(testset.id, names_to_log_date[log_date], str(restore_itr), result)
+                a.append(testset.id,  names_to_log_date[log_date], str(restore_itr), result)
 
 
 if __name__ == '__main__':

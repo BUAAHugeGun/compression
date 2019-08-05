@@ -7,9 +7,17 @@ from torch.utils.data import DataLoader
 from decoder import Decoder
 from encoder import Encoder
 from qauntization import Quantizator
-from SSIM_Loss import Loss
+# from SSIM_Loss import Loss
 from dataset import Dataset
 from torchvision import transforms
+import pytorch_ssim
+from Lp_Loss import Loss as lp
+
+
+# from Lp_Loss import Loss
+def load(encoder, decoder, log_dir, epoch):
+    encoder.load_state_dict(torch.load('encoder_epoch-{}.pth'.format(epoch), map_location='cpu'))
+    decoder.load_state_dict(torch.load('decoder_epoch-{}.pth'.format(epoch), map_location='cpu'))
 
 
 def train(encoder, decoder, train_loader, test_loader, opt, sch, criterion, args):
@@ -18,6 +26,8 @@ def train(encoder, decoder, train_loader, test_loader, opt, sch, criterion, args
     if torch.cuda.is_available():
         encoder = encoder.cuda()
         decoder = decoder.cuda()
+    if args.load_epoch >= 0:
+        load(encoder, decoder, args.log_dir, args.load_epoch)
     log_dir = args.log_dir
     if not os.path.exists(log_dir):
         os.mkdir(log_dir)
@@ -35,7 +45,11 @@ def train(encoder, decoder, train_loader, test_loader, opt, sch, criterion, args
                 data = data.cuda()
             y = encoder(img)
             output = decoder(y)
-            loss = criterion(output, data)
+            l1 = lp()
+            loss1 = 1 - criterion(output, data)
+            loss2 = l1(output, data)
+            loss = loss1 + loss2
+            print(loss)
             opt.zero_grad()
             loss.backward()
             opt.step()
@@ -43,12 +57,12 @@ def train(encoder, decoder, train_loader, test_loader, opt, sch, criterion, args
             if tot % args.show_interval == 0:
                 print(
                     '[epoch:{}, batch:{}]\t'.format(epoch, id),
-                    '[loss:{:.7f}]\t'.format(loss.item()),
+                    '[loss:{:.7f},{:.7f}]\t'.format(loss1.item(), loss2.item()),
                     '[lr:{:.7f}]'.format(sch.get_lr()[0])
                 )
                 print(
                     '[epoch:{}, batch:{}]\t'.format(epoch, id),
-                    '[loss:{:.7f}]\t'.format(loss.item()),
+                    '[loss:{:.7f},{:.7f}]\t'.format(loss2.item(), loss2.item()),
                     '[lr:{:.7f}]'.format(sch.get_lr()[0]),
                     file=log
                 )
@@ -62,7 +76,7 @@ def train(encoder, decoder, train_loader, test_loader, opt, sch, criterion, args
 def main(args):
     encoder = Encoder(in_channels=3, M=6)
     decoder = Decoder(out_channels=3, M=6)
-    criterion = Loss()
+    criterion = pytorch_ssim.SSIM(window_size=11)
 
     opt = torch.optim.Adam([{'params': encoder.parameters()}, {'params': decoder.parameters()}], lr=args.lr)
     sch = torch.optim.lr_scheduler.MultiStepLR(opt, args.lr_milestion, gamma=0.5)
@@ -81,14 +95,15 @@ if __name__ == '__main__':
     paser = argparse.ArgumentParser()
     paser.add_argument('--root', default='./')
     paser.add_argument('--log_dir', default='./logs')
-    paser.add_argument('--batch_size', default=5)
+    paser.add_argument('--batch_size', default=16)
     paser.add_argument('--num_workers', default=2)
-    paser.add_argument('--lr', default=0.01)
-    paser.add_argument('--lr_milestion', default=[2, 4, 6])
+    paser.add_argument('--lr', default=0.00006)
+    paser.add_argument('--lr_milestion', default=[3, 7])
     paser.add_argument('--epoch', default=10)
     paser.add_argument('--show_interval', default=1)
     paser.add_argument('--test_interval', default=2)
     paser.add_argument('--snapshot_interval', default=1)
+    paser.add_argument('--load_epoch', default=4)
     args = paser.parse_args()
     if not os.path.exists(args.log_dir):
         os.mkdir(args.log_dir)
