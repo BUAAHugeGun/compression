@@ -10,13 +10,13 @@ import pytorch_ssim
 from PSNR_Loss import Loss as PSNR
 
 
-def pad(x):
+def pad(x, base=32):
     b, c, h, w = x.shape
-    print(x.shape)
-    H = ((h - 1) // 32 + 2) * 32
-    W = ((w - 1) // 32 + 2) * 32
+    H = (h // base + 1) * base
+    W = (w // base + 1) * base
     y = torch.zeros([b, c, H, W])
-    print(x.shape, y[:, :, 0:h, 0:w].shape)
+    if x.dtype == torch.int:
+        y = y.int()
     y[:, :, 0:h, 0:w] += x
     return y
 
@@ -30,9 +30,8 @@ if __name__ == '__main__':
     img_path = '../../test.jpg'
     img = cv2.imread(img_path)
     img = np.array(img)
-    print(img)
     x = transforms.ToTensor()(img)
-    # x = x[:, 0:128, 0:128]
+    x = x[:, 0:128 * 10, 0:128 * 10]
     x = x.unsqueeze(0)
     # x = x[:, :, 0:128, 0:128]
     b, c, h, w = x.shape
@@ -59,7 +58,6 @@ if __name__ == '__main__':
     x = x.squeeze(0)
     x = np.swapaxes(x, 0, 2)
     x = np.swapaxes(x, 0, 1)
-    x = x[0:w, 0:h, :]
-    print(x.shape)
-    # cv2.imwrite('./out.jpg', x)
+    x = x[0:h, 0:w, :]
+    cv2.imwrite('./out.jpg', x)
     cv2.waitKey(0)

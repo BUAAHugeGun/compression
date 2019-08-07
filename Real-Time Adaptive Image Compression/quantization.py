@@ -5,10 +5,10 @@ import torch.nn as nn
 class Quantizator(nn.Module):
     def __init__(self, B=6):
         super(Quantizator, self).__init__()
-        self.B = B - 1
+        self.B = B
 
     def forward(self, y):
-        factor = 1 << self.B
+        factor = (1 << self.B) - 1
         return torch.ceil(y * factor) / factor
 
 

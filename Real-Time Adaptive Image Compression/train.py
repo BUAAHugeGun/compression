@@ -43,13 +43,14 @@ def train(encoder, decoder, train_loader, test_loader, opt, sch, criterion, args
             if torch.cuda.is_available():
                 img = img.cuda()
                 data = data.cuda()
+            quantizator = Quantizator()
             y = encoder(img)
+            y = quantizator(y)
             output = decoder(y)
             l1 = lp()
             loss1 = 1 - criterion(output, data)
             loss2 = l1(output, data)
             loss = loss1 + loss2
-            print(loss)
             opt.zero_grad()
             loss.backward()
             opt.step()
@@ -74,8 +75,8 @@ def train(encoder, decoder, train_loader, test_loader, opt, sch, criterion, args
 
 
 def main(args):
-    encoder = Encoder(in_channels=3, M=6)
-    decoder = Decoder(out_channels=3, M=6)
+    encoder = Encoder(in_channels=3, M=6, out_channels=60)
+    decoder = Decoder(out_channels=60, M=6)
     criterion = pytorch_ssim.SSIM(window_size=11)
 
     opt = torch.optim.Adam([{'params': encoder.parameters()}, {'params': decoder.parameters()}], lr=args.lr)
@@ -97,13 +98,13 @@ if __name__ == '__main__':
     paser.add_argument('--log_dir', default='./logs')
     paser.add_argument('--batch_size', default=16)
     paser.add_argument('--num_workers', default=2)
-    paser.add_argument('--lr', default=0.00006)
+    paser.add_argument('--lr', default=0.0003)
     paser.add_argument('--lr_milestion', default=[3, 7])
     paser.add_argument('--epoch', default=10)
     paser.add_argument('--show_interval', default=1)
     paser.add_argument('--test_interval', default=2)
     paser.add_argument('--snapshot_interval', default=1)
-    paser.add_argument('--load_epoch', default=4)
+    paser.add_argument('--load_epoch', default=-1)
     args = paser.parse_args()
     if not os.path.exists(args.log_dir):
         os.mkdir(args.log_dir)

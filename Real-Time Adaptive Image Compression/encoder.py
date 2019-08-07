@@ -5,9 +5,10 @@ import math
 
 
 class Encoder(nn.Module):
-    def __init__(self, in_channels=3, M=6):
+    def __init__(self, in_channels=3, M=6, out_channels=60):
         super(Encoder, self).__init__()
         self.in_channels = in_channels
+        self.out_channels = out_channels
         self.M = M
         self.build(c=[256, 128, 64, 32, 16, 8])
         self.initial()
@@ -49,13 +50,14 @@ class Encoder(nn.Module):
             f1 = self._conv_layer(3, c[i] // 2, 3, 1, 1)
             f2 = self._conv_layer(c[i] // 2, c[i], 3, 1, 1)
             self.f.append(nn.Sequential(f1, f2))
-        self.g.append(self._conv_layer(c[0], 24, 5, 4, 1))
-        self.g.append(self._conv_layer(c[1], 24, 3, 2, 1))
-        self.g.append(self._conv_layer(c[2], 24, 3, 1, 1))
-        self.g.append(self._conv_layer(c[3], 24, 3, 1, 1))
-        self.g.append(self._deconv_layer(c[4], 24, 3, 2, 1))
-        self.g.append(self._deconv_layer(c[5], 24, 5, 4, 1))
-        self.G = self._conv_layer(144, 144, 3, 1, 1)
+        channels = self.out_channels // 6
+        self.g.append(self._conv_layer(c[0], channels, 5, 4, 1))
+        self.g.append(self._conv_layer(c[1], channels, 3, 2, 1))
+        self.g.append(self._conv_layer(c[2], channels, 3, 1, 1))
+        self.g.append(self._conv_layer(c[3], channels, 3, 1, 1))
+        self.g.append(self._deconv_layer(c[4], channels, 3, 2, 1))
+        self.g.append(self._deconv_layer(c[5], channels, 5, 4, 1))
+        self.G = self._conv_layer(self.out_channels, self.out_channels, 3, 1, 1)
         self.d_list = nn.Sequential(*self.d)
         self.f_list = nn.Sequential(*self.f)
         self.g_list = nn.Sequential(*self.g)

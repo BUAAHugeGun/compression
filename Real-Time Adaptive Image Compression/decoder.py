@@ -5,7 +5,7 @@ import math
 
 
 class Decoder(nn.Module):
-    def __init__(self, out_channels=144, M=6):
+    def __init__(self, out_channels=60, M=6):
         super(Decoder, self).__init__()
         self.out_channels = out_channels
         self.M = M
@@ -32,16 +32,17 @@ class Decoder(nn.Module):
         return nn.Sequential(*layers)
 
     def build(self, c):
-        self.G = self._conv_layer(144, 144, 3, 1, 1)
+        self.G = self._conv_layer(self.out_channels, self.out_channels, 3, 1, 1)
         self.g = []
         self.f = []
         self.d = []
-        self.g.append(self._deconv_layer(24, c[0], 5, 4, 1))
-        self.g.append(self._deconv_layer(24, c[1], 3, 2, 1))
-        self.g.append(self._conv_layer(24, c[2], 3, 1, 1))
-        self.g.append(self._conv_layer(24, c[3], 3, 1, 1))
-        self.g.append(self._conv_layer(24, c[4], 3, 2, 1))
-        self.g.append(self._conv_layer(24, c[5], 5, 4, 1))
+        channels = self.out_channels // 6
+        self.g.append(self._deconv_layer(channels, c[0], 5, 4, 1))
+        self.g.append(self._deconv_layer(channels, c[1], 3, 2, 1))
+        self.g.append(self._conv_layer(channels, c[2], 3, 1, 1))
+        self.g.append(self._conv_layer(channels, c[3], 3, 1, 1))
+        self.g.append(self._conv_layer(channels, c[4], 3, 2, 1))
+        self.g.append(self._conv_layer(channels, c[5], 5, 4, 1))
         for i in range(0, 3):
             f1 = self._deconv_layer(c[i] // 2, 3, 3, 2, 1)
             f2 = self._conv_layer(c[i], c[i] // 2, 3, 1, 1)
@@ -77,7 +78,7 @@ class Decoder(nn.Module):
         fy = []
         dy = []
         for i in range(0, self.M):
-            gy.append(self.g[i](y[:, i * 24:(i + 1) * 24, :, :]))
+            gy.append(self.g[i](y[:, i * self.out_channels // 6:(i + 1) * self.out_channels // 6, :, :]))
         for i in range(0, self.M):
             fy.append(self.f[i](gy[i]))
         for i in range(0, self.M):
