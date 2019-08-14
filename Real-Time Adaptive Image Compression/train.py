@@ -6,7 +6,7 @@ import os
 from torch.utils.data import DataLoader
 from decoder import Decoder
 from encoder import Encoder
-from qauntization import Quantizator
+from quantization import Quantizator
 # from SSIM_Loss import Loss
 from dataset import Dataset
 from torchvision import transforms
@@ -16,8 +16,8 @@ from Lp_Loss import Loss as lp
 
 # from Lp_Loss import Loss
 def load(encoder, decoder, log_dir, epoch):
-    encoder.load_state_dict(torch.load('encoder_epoch-{}.pth'.format(epoch), map_location='cpu'))
-    decoder.load_state_dict(torch.load('decoder_epoch-{}.pth'.format(epoch), map_location='cpu'))
+    encoder.load_state_dict(torch.load('./logs/encoder_epoch-{}.pth'.format(epoch)))
+    decoder.load_state_dict(torch.load('./logs/decoder_epoch-{}.pth'.format(epoch)))
 
 
 def train(encoder, decoder, train_loader, test_loader, opt, sch, criterion, args):
@@ -75,8 +75,8 @@ def train(encoder, decoder, train_loader, test_loader, opt, sch, criterion, args
 
 
 def main(args):
-    encoder = Encoder(in_channels=3, M=6, out_channels=60)
-    decoder = Decoder(out_channels=60, M=6)
+    encoder = Encoder(out_channels=60)
+    decoder = Decoder(out_channels=60)
     criterion = pytorch_ssim.SSIM(window_size=11)
 
     opt = torch.optim.Adam([{'params': encoder.parameters()}, {'params': decoder.parameters()}], lr=args.lr)
@@ -99,11 +99,11 @@ if __name__ == '__main__':
     paser.add_argument('--batch_size', default=16)
     paser.add_argument('--num_workers', default=2)
     paser.add_argument('--lr', default=0.0003)
-    paser.add_argument('--lr_milestion', default=[3, 7])
-    paser.add_argument('--epoch', default=10)
+    paser.add_argument('--lr_milestion', default=[30, 50, 70])
+    paser.add_argument('--epoch', default=100)
     paser.add_argument('--show_interval', default=1)
     paser.add_argument('--test_interval', default=2)
-    paser.add_argument('--snapshot_interval', default=1)
+    paser.add_argument('--snapshot_interval', default=5)
     paser.add_argument('--load_epoch', default=-1)
     args = paser.parse_args()
     if not os.path.exists(args.log_dir):

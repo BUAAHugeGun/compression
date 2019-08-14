@@ -17,8 +17,8 @@ class Loss(nn.Module):
             input = input.unsqueeze(0)
             target = target.unsqueeze(0)
         if self.tp == 'int':
-            input = input / 256
-            target = target / 256
+            input = input / 255
+            target = target / 255
         MSE = ((target - input) ** 2).sum() / (input.shape[1] * input.shape[2] * input.shape[0] * input.shape[3])
         return 10 * torch.log10(1. / MSE)
 

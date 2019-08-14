@@ -19,10 +19,9 @@ class Encoder(nn.Module):
                                 padding=padding, bias=bias))
         if bn:
             layers.append(nn.BatchNorm2d(out_channels))
-        layers.append(nn.LeakyReLU(0))
+        layers.append(nn.LeakyReLU(0.2))
         return nn.Sequential(*layers)
 
-    '''
     def _deconv_layer(self, in_channels, out_channels, kernel, stride, padding, bias=True, bn=True):
         layers = []
         if padding == 0:
@@ -34,9 +33,8 @@ class Encoder(nn.Module):
             padding=padding, bias=bias, output_padding=output_padding))
         if bn:
             layers.append(nn.BatchNorm2d(out_channels))
-        layers.append(nn.LeakyReLU(0))
+        layers.append(nn.LeakyReLU(0.2))
         return nn.Sequential(*layers)
-    '''
 
     def _pool_layer(self, kernel, stride, padding=0, mode="Avg"):
         if mode != "Max" and mode != "Avg":
@@ -50,27 +48,24 @@ class Encoder(nn.Module):
         self.d = []
         self.f = []
         self.g = []
-        self.D = self._conv_layer(3, 16, 3, 1, 1)
         for i in range(0, self.M - 1):
-            self.d.append(nn.Sequential(self._conv_layer(16, 16, 3, 1, 1), self._pool_layer(2, 2)))
+            self.d.append(nn.Sequential(self._conv_layer(3, 3, 3, 2, 1)))  # , self._pool_layer(2, 2, 0)))
         for i in range(0, 3):
-            f1 = self._conv_layer(16, c[i], 3, 1, 1)
-            f2 = self._conv_layer(c[i], c[i], 3, 1, 1)
-            f3 = self._pool_layer(2, 2, 0)
-            self.f.append(nn.Sequential(f1, f2, f3))
+            f1 = self._conv_layer(3, c[i], 3, 1, 1)
+            f2 = self._conv_layer(c[i], c[i], 3, 2, 1)
+            # f3 = self._pool_layer(2, 2, 0)
+            self.f.append(nn.Sequential(f1, f2))
         for i in range(3, self.M):
-            f1 = self._conv_layer(16, c[i], 3, 1, 1)
+            f1 = self._conv_layer(3, c[i], 3, 1, 1)
             f2 = self._conv_layer(c[i], c[i], 3, 1, 1)
             self.f.append(nn.Sequential(f1, f2))
         channels = self.out_channels // 6
-        self.g.append(nn.Sequential(self._conv_layer(c[0], channels, 3, 1, 1), self._pool_layer(4, 4)))
-        self.g.append(nn.Sequential(self._conv_layer(c[1], channels, 3, 1, 1), self._pool_layer(2, 2)))
+        self.g.append(self._conv_layer(c[0], channels, 5, 4, 1))
+        self.g.append(self._conv_layer(c[1], channels, 3, 2, 1))
         self.g.append(self._conv_layer(c[2], channels, 3, 1, 1))
         self.g.append(self._conv_layer(c[3], channels, 3, 1, 1))
-        self.g.append(
-            nn.Sequential(nn.UpsamplingBilinear2d(scale_factor=2), self._conv_layer(c[4], channels, 3, 1, 1)))
-        self.g.append(
-            nn.Sequential(nn.UpsamplingBilinear2d(scale_factor=4), self._conv_layer(c[5], channels, 3, 1, 1)))
+        self.g.append(self._deconv_layer(c[4], channels, 3, 2, 1))
+        self.g.append(self._deconv_layer(c[5], channels, 5, 4, 1))
         self.G = self._conv_layer(self.out_channels, self.out_channels, 3, 1, 1)
         self.d_list = nn.Sequential(*self.d)
         self.f_list = nn.Sequential(*self.f)
@@ -92,7 +87,6 @@ class Encoder(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, x):
-        x = self.D(x)
         dx = []
         dx.append(x)
         fx = []

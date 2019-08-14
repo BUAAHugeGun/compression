@@ -13,20 +13,20 @@ class Dataset(dataset):
     def __init__(self, transform=None, train=True):
         super(Dataset, self).__init__()
         self.transform = transform
-        self.set = datasets.ImageFolder('../../dataset/coco/')
+        self.set = datasets.ImageFolder('../../dataset/compression/')
         self.data = self.set.imgs
         self.data = np.array(self.data)
         if train:
-            self.images = self.data[:, self.set.class_to_idx['train2014']]
+            self.images = self.data[:, self.set.class_to_idx['train']]
         else:
-            self.images = self.data[:, self.set.class_to_idx['val2017']]
+            self.images = self.data[:, self.set.class_to_idx['valid']]
 
     def __len__(self):
         return len(self.images)
 
     def __getitem__(self, item):
         img = cv2.imread(self.images[item])
-        # img = cv2.imread('../../test.jpeg')
+        #img = cv2.imread('../../test.png')[0:128, 0:128]
         # img = np.transpose(img, [2, 0, 1])[:, 0:64, 0:64]
         while img.shape[0] < 128:
             img = np.concatenate([img, img], 0)

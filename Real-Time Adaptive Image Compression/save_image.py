@@ -23,10 +23,11 @@ def save(image, B=6, base=8):
                     # print(x)
                     x = ACC.encode(x)[0]
                     # print(x)
-                    y = bytearray(8)
+                    y = bytearray(base * base // 8)
                     for p in range(len(x) // base):
                         y[p] = int(x[p * base:base * (p + 1)], 2)
                     print(y)
+                    print(len(y))
                     file.write(y)
 
 
@@ -41,6 +42,23 @@ if __name__ == '__main__':
     save(x)
     print("")
     file = open('image.wm', "rb")
-    y = bytearray
     y = file.read()
     print(y)
+    x = torch.randn(320, 16, 3)
+    import cv2
+    import numpy as np
+
+    x = x.numpy() * 255
+    x = np.clip(x, 0, 255)
+    print(x)
+    cv2.imwrite('test.png', x)
+    cv2.imwrite('test.jpg', x)
+    y = cv2.imread('./test.jpg')
+    # print(y)
+    z = cv2.imread('./test.png')
+    print(y)
+    print("???")
+    print(z)
+    print("???")
+    # z[:, :, 0], z[:, :, 2] = z[:, :, 2], z[:, :, 0]
+    print(y - z)
