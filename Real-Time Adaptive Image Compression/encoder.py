@@ -16,7 +16,7 @@ class Encoder(nn.Module):
     def _conv_layer(self, in_channels, out_channels, kernel, stride, padding, bias=True, bn=True):
         layers = []
         layers.append(nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel, stride=stride,
-                                padding=padding, bias=bias))
+                                padding=padding, bias=bias, padding_mode='reflection'))
         if bn:
             layers.append(nn.BatchNorm2d(out_channels))
         layers.append(nn.LeakyReLU(0.2))
@@ -49,19 +49,19 @@ class Encoder(nn.Module):
         self.f = []
         self.g = []
         for i in range(0, self.M - 1):
-            self.d.append(nn.Sequential(self._conv_layer(3, 3, 3, 2, 1)))  # , self._pool_layer(2, 2, 0)))
+            self.d.append(nn.Sequential(self._conv_layer(3, 3, 3, 1, 1), self._pool_layer(2, 2, 0)))
         for i in range(0, 3):
             f1 = self._conv_layer(3, c[i], 3, 1, 1)
-            f2 = self._conv_layer(c[i], c[i], 3, 2, 1)
-            # f3 = self._pool_layer(2, 2, 0)
-            self.f.append(nn.Sequential(f1, f2))
+            f2 = self._conv_layer(c[i], c[i], 3, 1, 1)
+            f3 = self._pool_layer(2, 2, 0)
+            self.f.append(nn.Sequential(f1, f2, f3))
         for i in range(3, self.M):
             f1 = self._conv_layer(3, c[i], 3, 1, 1)
             f2 = self._conv_layer(c[i], c[i], 3, 1, 1)
             self.f.append(nn.Sequential(f1, f2))
         channels = self.out_channels // 6
-        self.g.append(self._conv_layer(c[0], channels, 5, 4, 1))
-        self.g.append(self._conv_layer(c[1], channels, 3, 2, 1))
+        self.g.append(nn.Sequential(self._conv_layer(c[0], channels, 3, 1, 1), self._pool_layer(4, 4)))
+        self.g.append(nn.Sequential(self._conv_layer(c[1], channels, 3, 1, 1), self._pool_layer(2, 2)))
         self.g.append(self._conv_layer(c[2], channels, 3, 1, 1))
         self.g.append(self._conv_layer(c[3], channels, 3, 1, 1))
         self.g.append(self._deconv_layer(c[4], channels, 3, 2, 1))

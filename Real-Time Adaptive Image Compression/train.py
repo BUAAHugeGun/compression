@@ -16,8 +16,17 @@ from Lp_Loss import Loss as lp
 
 # from Lp_Loss import Loss
 def load(encoder, decoder, log_dir, epoch):
-    encoder.load_state_dict(torch.load('./logs/encoder_epoch-{}.pth'.format(epoch)))
-    decoder.load_state_dict(torch.load('./logs/decoder_epoch-{}.pth'.format(epoch)))
+    pre_encoder = torch.load('./logs/encoder_epoch-{}.pth'.format(epoch), map_location='cpu')
+    now_encoder = encoder.state_dict()
+    pre_encoder = {k: v for k, v in pre_encoder.items() if k in now_encoder}
+    now_encoder.update(pre_encoder)
+    encoder.load_state_dict(now_encoder)
+
+    pre_decoder = torch.load('./logs/decoder_epoch-{}.pth'.format(epoch), map_location='cpu')
+    now_decoder = decoder.state_dict()
+    pre_decoder = {k: v for k, v in pre_decoder.items() if k in now_decoder}
+    now_decoder.update(pre_decoder)
+    decoder.load_state_dict(now_decoder)
 
 
 def train(encoder, decoder, train_loader, test_loader, opt, sch, criterion, args):
@@ -97,13 +106,13 @@ if __name__ == '__main__':
     paser.add_argument('--log_dir', default='./logs')
     paser.add_argument('--batch_size', default=16)
     paser.add_argument('--num_workers', default=2)
-    paser.add_argument('--lr', default=0.0003)
+    paser.add_argument('--lr', default=0.00008)
     paser.add_argument('--lr_milestion', default=[10, 70, 500, 1000])
     paser.add_argument('--epoch', default=2000)
     paser.add_argument('--show_interval', default=1)
     paser.add_argument('--test_interval', default=2)
     paser.add_argument('--snapshot_interval', default=5)
-    paser.add_argument('--load_epoch', default=-1)
+    paser.add_argument('--load_epoch', default=1640)
     args = paser.parse_args()
     if not os.path.exists(args.log_dir):
         os.mkdir(args.log_dir)
