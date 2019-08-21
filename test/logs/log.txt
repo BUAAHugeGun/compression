@@ -1,0 +1,10 @@
+Namespace(batch_size=16, epoch=2000, load_epoch=990, log_dir='./logs', lr=0.0002, lr_milestion=[10, 70, 500, 1000], num_workers=2, root='./', show_interval=1, snapshot_interval=5, test_interval=2)
+[epoch:0, batch:0]	 [loss:0.2329664,0.2329664]	 [lr:0.0002000]
+[epoch:0, batch:1]	 [loss:0.1755980,0.1755980]	 [lr:0.0002000]
+[epoch:0, batch:2]	 [loss:0.1632456,0.1632456]	 [lr:0.0002000]
+[epoch:0, batch:3]	 [loss:0.1746739,0.1746739]	 [lr:0.0002000]
+[epoch:0, batch:4]	 [loss:0.2137570,0.2137570]	 [lr:0.0002000]
+[epoch:0, batch:5]	 [loss:0.1632191,0.1632191]	 [lr:0.0002000]
+[epoch:0, batch:6]	 [loss:0.1533625,0.1533625]	 [lr:0.0002000]
+[epoch:0, batch:7]	 [loss:0.1749911,0.1749911]	 [lr:0.0002000]
+[epoch:0, batch:8]	 [loss:0.1514304,0.1514304]	 [lr:0.0002000]

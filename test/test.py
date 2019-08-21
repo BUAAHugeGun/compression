@@ -3,6 +3,7 @@ from decoder import Decoder
 from torchvision import transforms
 import cv2
 import torch
+import torch.nn as nn
 import numpy as np
 import os
 import Lp_Loss
@@ -22,17 +23,42 @@ def pad(x, base=32):
 
 
 def load(encoder, decoder):
-    encoder.load_state_dict(torch.load('encoder_epoch-25.pth', map_location='cpu'))
-    decoder.load_state_dict(torch.load('decoder_epoch-25.pth', map_location='cpu'))
+    encoder.load_state_dict(torch.load('encoder_epoch-990.pth', map_location='cpu'))
+    decoder.load_state_dict(torch.load('decoder_epoch-990.pth', map_location='cpu'))
 
 
 s1 = torch.zeros(1)
 s2 = torch.zeros(1)
 num = 0
 
+pic = []
 
-def main(img_path='../../test_.png'):
-    global s1, s2, num
+encoder = None
+decoder = None
+
+
+def run(x):
+    global pic, encoder, decoder
+    print(x.shape)
+    te = nn.ReflectionPad2d(32)
+    x = te(x)
+    x.requires_grad = False
+    with torch.no_grad():
+        y = encoder(x)
+        pic.append(y.clone())
+        x = decoder(y).detach()
+        x = x[:, :, 32:-32, 32:-32]
+    return x
+
+
+def main(img_path='../../test_.png', base=256):
+    global s1, s2, num, pic, encoder, decoder
+    num += 1
+    encoder = Encoder(out_channels=30)
+    decoder = Decoder(out_channels=30)
+    load(encoder, decoder)
+    encoder.eval()
+    decoder.eval()
     img = cv2.imread(img_path)
     img = np.array(img)
     x = transforms.ToTensor()(img)
@@ -40,32 +66,50 @@ def main(img_path='../../test_.png'):
     x = x.unsqueeze(0)
     # x = x[:, :, 0:128, 0:128]
     b, c, h, w = x.shape
-    if x.shape[2] % 512 != 0 or x.shape[3] % 512 != 0:
-        x = pad(x)
+    if x.shape[2] % base != 0 or x.shape[3] % base != 0:
+        x = pad(x, base)
     b, c, H, W = x.shape
     x.requires_grad = False
-    encoder = Encoder(out_channels=60)
-    decoder = Decoder(out_channels=60)
-    load(encoder, decoder)
-    encoder.eval()
-    decoder.eval()
+    if torch.cuda.is_available():
+        encoder = encoder.cuda()
+        decoder = decoder.cuda()
+        x = x.cuda()
     y = x.clone()
-    # print(x.shape)
-    z = np.ndarray([b, c, H, W])
-    for i in range(0, x.shape[2] // 512):
-        for j in range(0, x.shape[3] // 512):
-            xx = x[:, :, i * 512:i * 512 + 512, j * 512:j * 512 + 512]
-            xx = decoder(encoder(xx).detach())
-            z[:, :, i * 512:i * 512 + 512, j * 512:j * 512 + 512] = xx.detach().numpy()
-            print(i, j)
-    x=torch.tensor(z).float()
+
+    if torch.cuda.is_available():
+        pass
+    z = []
+    for i in range(0, x.shape[2] // base):
+        for j in range(0, x.shape[3] // base):
+            z.append(x[:, :, i * base:(i + 1) * base, j * base:(j + 1) * base])
+
+    z = torch.cat(z, 0)
+    patches = z.shape[0]
+    print(patches)
+
+    z[0:patches // 4, :, :, :] = run(z[0:patches // 4, :, :, :]).detach()
+    z[patches // 4:patches // 2, :, :, :] = run(z[patches // 4:patches // 2, :, :, :]).detach()
+    z[patches // 2:patches * 3 // 4, :, :, :] = run(z[patches // 2:patches * 3 // 4, :, :, :]).detach()
+    z[patches * 3 // 4:patches, :, :, :] = run(z[patches * 3 // 4:patches, :, :, :]).detach()
+
+    """
+    pic = torch.cat(pic, 0) * 255
+    print(pic.shape)
+    pic = pic.reshape(-1, 36*30, 3).int().numpy()
+    cv2.imwrite('test.png', pic)
+    """
+
+    tot = 0
+    for i in range(0, x.shape[2] // base):
+        for j in range(0, x.shape[3] // base):
+            x[:, :, i * base:(i + 1) * base, j * base:(j + 1) * base] = z[tot]
+            tot += 1
     l1 = Lp_Loss.Loss(p=1)
     ss = pytorch_ssim.SSIM(window_size=11)
     psnr = PSNR()
     psnr.eval()
     ss.eval()
     x = torch.clamp(x, 0, 1)
-    # print(ss(x, y), l1(x, y), psnr(x, y))
     s1 += ss(x, y)
     s2 += psnr(x, y)
     x = x.detach()
@@ -81,17 +125,17 @@ def main(img_path='../../test_.png'):
     x = np.swapaxes(x, 0, 2)
     x = np.swapaxes(x, 0, 1)
     x = x[0:h, 0:w, :]
-    cv2.imwrite('./out.png', x)
-    cv2.waitKey(0)
+    cv2.imwrite('./out__.png', x)
+
+
+def test():
+    for maindir, subdir, file_name_list in os.walk("../../dataset/compression/valid"):
+        for filename in file_name_list:
+            print(filename)
+            main(os.path.join(maindir, filename))
 
 
 if __name__ == '__main__':
     import os
+
     main()
-    '''
-    for maindir, subdir, file_name_list in os.walk("../../dataset/compression/valid"):
-        for filename in file_name_list:
-            print(filename)
-            num += 1
-            main(os.path.join(maindir, filename))
-    '''

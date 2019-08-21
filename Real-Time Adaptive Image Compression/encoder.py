@@ -10,30 +10,16 @@ class Encoder(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.M = M
-        self.build(c=[256, 128, 64, 32, 16, 8])
+        self.build(c=[32, 32, 32, 32, 32, 32])
         self.initial()
 
-    def _conv_layer(self, in_channels, out_channels, kernel, stride, padding, bias=True, bn=True):
+    def _conv_layer(self, in_channels, out_channels, kernel, stride, padding, bias=True, bn=True, k=0):
         layers = []
         layers.append(nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel, stride=stride,
                                 padding=padding, bias=bias, padding_mode='reflection'))
         if bn:
             layers.append(nn.BatchNorm2d(out_channels))
-        layers.append(nn.LeakyReLU(0.2))
-        return nn.Sequential(*layers)
-
-    def _deconv_layer(self, in_channels, out_channels, kernel, stride, padding, bias=True, bn=True):
-        layers = []
-        if padding == 0:
-            output_padding = 0
-        else:
-            output_padding = 1
-        layers.append(nn.ConvTranspose2d(
-            in_channels=in_channels, out_channels=out_channels, kernel_size=kernel, stride=stride,
-            padding=padding, bias=bias, output_padding=output_padding))
-        if bn:
-            layers.append(nn.BatchNorm2d(out_channels))
-        layers.append(nn.LeakyReLU(0.2))
+        layers.append(nn.LeakyReLU(k))
         return nn.Sequential(*layers)
 
     def _pool_layer(self, kernel, stride, padding=0, mode="Avg"):
@@ -60,12 +46,14 @@ class Encoder(nn.Module):
             f2 = self._conv_layer(c[i], c[i], 3, 1, 1)
             self.f.append(nn.Sequential(f1, f2))
         channels = self.out_channels // 6
-        self.g.append(nn.Sequential(self._conv_layer(c[0], channels, 3, 1, 1), self._pool_layer(4, 4)))
-        self.g.append(nn.Sequential(self._conv_layer(c[1], channels, 3, 1, 1), self._pool_layer(2, 2)))
-        self.g.append(self._conv_layer(c[2], channels, 3, 1, 1))
-        self.g.append(self._conv_layer(c[3], channels, 3, 1, 1))
-        self.g.append(self._deconv_layer(c[4], channels, 3, 2, 1))
-        self.g.append(self._deconv_layer(c[5], channels, 5, 4, 1))
+        self.g.append(nn.Sequential(self._conv_layer(c[0], channels, 3, 1, 1, k=0.2), self._pool_layer(4, 4)))
+        self.g.append(nn.Sequential(self._conv_layer(c[1], channels, 3, 1, 1, k=0.2), self._pool_layer(2, 2)))
+        self.g.append(self._conv_layer(c[2], channels, 3, 1, 1, k=0.2))
+        self.g.append(self._conv_layer(c[3], channels, 3, 1, 1, k=0.2))
+        self.g.append(
+            nn.Sequential(nn.UpsamplingBilinear2d(scale_factor=2), self._conv_layer(c[4], channels, 3, 1, 1, k=0.2)))
+        self.g.append(
+            nn.Sequential(nn.UpsamplingBilinear2d(scale_factor=4), self._conv_layer(c[5], channels, 3, 1, 1, k=0.2)))
         self.G = self._conv_layer(self.out_channels, self.out_channels, 3, 1, 1)
         self.d_list = nn.Sequential(*self.d)
         self.f_list = nn.Sequential(*self.f)
@@ -93,13 +81,20 @@ class Encoder(nn.Module):
         gx = []
         for i in range(0, self.M - 1):
             dx.append(self.d[i](dx[i]))
+        if torch.cuda.is_available():
+            print("encoder: d", torch.cuda.max_memory_allocated())
         for i in range(0, self.M):
             fx.append(self.f[i](dx[i]))
+        if torch.cuda.is_available():
+            print("encoder: f", torch.cuda.max_memory_allocated())
+        for i in range(0, self.M):
             gx.append(self.g[i](fx[i]))
+        if torch.cuda.is_available():
+            print("encoder: g", torch.cuda.max_memory_allocated())
         return self.G(torch.cat(gx, 1))
 
 
 if __name__ == '__main__':
-    x = torch.randn(2, 3, 128, 128)
+    x = torch.randn(2, 3, 2048, 1381)
     test = Encoder(3)
     print(test(x).shape)

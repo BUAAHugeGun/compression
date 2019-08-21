@@ -7,3 +7,5 @@
 *.png
 *.l3c
 ./test
+./test_
+./u-net

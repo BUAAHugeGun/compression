@@ -23,8 +23,8 @@ def pad(x, base=32):
 
 
 def load(encoder, decoder):
-    encoder.load_state_dict(torch.load('encoder_epoch-990.pth', map_location='cpu'))
-    decoder.load_state_dict(torch.load('decoder_epoch-990.pth', map_location='cpu'))
+    encoder.load_state_dict(torch.load('encoder_epoch-1995.pth', map_location='cpu'))
+    decoder.load_state_dict(torch.load('decoder_epoch-1995.pth', map_location='cpu'))
 
 
 s1 = torch.zeros(1)
@@ -33,15 +33,13 @@ num = 0
 
 pic = []
 
+encoder = None
+decoder = None
+
 
 def run(x):
-    global pic
+    global pic, encoder, decoder
     print(x.shape)
-    encoder = Encoder(out_channels=30)
-    decoder = Decoder(out_channels=30)
-    load(encoder, decoder)
-    encoder.eval()
-    decoder.eval()
     te = nn.ReflectionPad2d(32)
     x = te(x)
     x.requires_grad = False
@@ -53,8 +51,14 @@ def run(x):
     return x
 
 
-def main(img_path='../../test___.png', base=1024):
-    global s1, s2, num, pic
+def main(img_path='../../test_.png', base=256):
+    global s1, s2, num, pic, encoder, decoder
+    num += 1
+    encoder = Encoder(out_channels=60)
+    decoder = Decoder(out_channels=60)
+    load(encoder, decoder)
+    encoder.eval()
+    decoder.eval()
     img = cv2.imread(img_path)
     img = np.array(img)
     x = transforms.ToTensor()(img)
@@ -66,8 +70,14 @@ def main(img_path='../../test___.png', base=1024):
         x = pad(x, base)
     b, c, H, W = x.shape
     x.requires_grad = False
+    if torch.cuda.is_available():
+        encoder = encoder.cuda()
+        decoder = decoder.cuda()
+        x = x.cuda()
     y = x.clone()
 
+    if torch.cuda.is_available():
+        pass
     z = []
     for i in range(0, x.shape[2] // base):
         for j in range(0, x.shape[3] // base):
@@ -81,7 +91,6 @@ def main(img_path='../../test___.png', base=1024):
     z[patches // 4:patches // 2, :, :, :] = run(z[patches // 4:patches // 2, :, :, :]).detach()
     z[patches // 2:patches * 3 // 4, :, :, :] = run(z[patches // 2:patches * 3 // 4, :, :, :]).detach()
     z[patches * 3 // 4:patches, :, :, :] = run(z[patches * 3 // 4:patches, :, :, :]).detach()
-
 
     """
     pic = torch.cat(pic, 0) * 255
@@ -119,13 +128,21 @@ def main(img_path='../../test___.png', base=1024):
     cv2.imwrite('./out__.png', x)
 
 
-if __name__ == '__main__':
-    import os
-
-    # main()
-
+def test():
     for maindir, subdir, file_name_list in os.walk("../../dataset/compression/valid"):
         for filename in file_name_list:
             print(filename)
-            num += 1
             main(os.path.join(maindir, filename))
+
+
+if __name__ == '__main__':
+    import os
+
+    x = torch.randn(1, 3, 2048, 1024)
+    encoder = Encoder(out_channels=30)
+    decoder = Decoder(30)
+    if torch.cuda.is_available():
+        encoder = encoder.cuda()
+        decoder = decoder.cuda()
+        x = x.cuda()
+    x = decoder(encoder(x.detach()))
