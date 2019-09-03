@@ -12,7 +12,10 @@ from quantization import Quantizator
 from dataset import Dataset
 from torchvision import transforms
 import pytorch_ssim
+from SSIM_Loss import msssim
+from TV_Loss import Loss as TV
 from Lp_Loss import Loss as lp
+import color_space
 
 
 # from Lp_Loss import Loss
@@ -50,33 +53,36 @@ def train(encoder, decoder, predictor, train_loader, test_loader, opt, pre_opt, 
 
     tot = 0
     l1 = lp()
+    tv = TV()
+    color = color_space.Model()
     for epoch in range(args.epoch):
         sch.step()
         # pre_sch.step()
         for id, data in enumerate(train_loader):
             tot += 1
             img = data.clone()
+            img.requires_grad = True
+            data.requires_grad = True
             if torch.cuda.is_available():
                 img = img.cuda()
                 data = data.cuda()
-            quantizator = Quantizator()
-            x = encoder(img)
-            """
-            y = x.clone().detach()
-            x = quantizator(x)
-            z = x.clone().detach()
-            p = predictor(z)
-            loss_pre1 = l1(p, y)
-            loss_pre2 = 1 - criterion(p, y)
-            loss_pre = loss_pre1
-            print(l1(y, z), p.sum(), torch.abs(p).sum())
-            x += p.detach()
-            """
 
-            output = decoder(x)
-            loss1 = 1 - criterion(output, data)
+            """
+            data_ = color(data, 'RGB2YUV')
+            data_ = color(data_, 'YUV2YUV420')
+            output = []
+            for k in range(0, 3):
+                output.append(decoder(encoder(data_[k])))
+            output = color(output, 'YUV4202YUV')
+            output = color(output, 'YUV2RGB')
+            """
+            output = decoder(encoder(data))
+
+            output = output.clamp(0, 1)
+            loss1 = 1 - msssim(output, data)
             loss2 = l1(output, data)
-            loss = loss1 + loss2
+            loss3 = tv(output)
+            loss = loss1
             opt.zero_grad()
             loss.backward()
             opt.step()
@@ -89,13 +95,13 @@ def train(encoder, decoder, predictor, train_loader, test_loader, opt, pre_opt, 
             if tot % args.show_interval == 0:
                 print(
                     '[epoch:{}, batch:{}]\t'.format(epoch, id),
-                    '[loss:{:.7f},{:.7f},{:.7f},{:.7f}]\t'.format(loss1.item(), loss2.item(), loss_pre1.item(),
+                    '[loss:{:.7f},{:.7f},{:.7f},{:.7f}]\t'.format(loss1.item(), loss2.item(), loss3.item(),
                                                                   loss_pre2.item()),
                     '[lr:{:.7f},{:7f}]'.format(sch.get_lr()[0], pre_sch.get_lr()[0])
                 )
                 print(
                     '[epoch:{}, batch:{}]\t'.format(epoch, id),
-                    '[loss:{:.7f},{:.7f},{:.7f},{:.7f}]\t'.format(loss1.item(), loss2.item(), loss_pre1.item(),
+                    '[loss:{:.7f},{:.7f},{:.7f},{:.7f}]\t'.format(loss1.item(), loss2.item(), loss3.item(),
                                                                   loss_pre2.item()),
                     '[lr:{:.7f},{:7f}]'.format(sch.get_lr()[0], pre_sch.get_lr()[0]),
                     file=log
@@ -109,8 +115,9 @@ def train(encoder, decoder, predictor, train_loader, test_loader, opt, pre_opt, 
 
 
 def main(args):
-    encoder = Encoder(out_channels=192)
-    decoder = Decoder(out_channels=192)
+    encoder = Encoder(in_channels=3, out_channels=60)
+    decoder = Decoder(in_channels=3, out_channels=60)
+    torch.save(encoder.state_dict(), './test.pth')
     predictor = PD(30)
     criterion = pytorch_ssim.SSIM(window_size=11)
 
@@ -136,8 +143,8 @@ if __name__ == '__main__':
     paser.add_argument('--batch_size', default=16)
     paser.add_argument('--num_workers', default=2)
     paser.add_argument('--lr', default=0.0003)
-    paser.add_argument('--lr_milestion', default=[10, 50, 100, 500])
-    paser.add_argument('--epoch', default=2000)
+    paser.add_argument('--lr_milestion', default=[10, 30, 60, 100, 1000])
+    paser.add_argument('--epoch', default=2001)
     paser.add_argument('--show_interval', default=1)
     paser.add_argument('--test_interval', default=2)
     paser.add_argument('--snapshot_interval', default=5)

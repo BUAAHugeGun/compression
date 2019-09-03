@@ -1,6 +1,7 @@
 from encoder import Encoder
 from decoder import Decoder
 from torchvision import transforms
+from predict_network import Model as Predictor
 import cv2
 import torch
 import torch.nn as nn
@@ -22,9 +23,18 @@ def pad(x, base=32):
     return y
 
 
-def load(encoder, decoder):
-    encoder.load_state_dict(torch.load('./logs/encoder_epoch-990.pth'))
-    decoder.load_state_dict(torch.load('./logs/decoder_epoch-990.pth'))
+def load(encoder, decoder, pre=None):
+    pre_encoder = torch.load('./logs/encoder_epoch-{}.pth'.format(2000), map_location='cpu')
+    now_encoder = encoder.state_dict()
+    pre_encoder = {k[7:]: v for k, v in pre_encoder.items()}
+    now_encoder.update(pre_encoder)
+    encoder.load_state_dict(now_encoder)
+
+    pre_decoder = torch.load('./logs/decoder_epoch-{}.pth'.format(2000), map_location='cpu')
+    now_decoder = decoder.state_dict()
+    pre_decoder = {k[7:]: v for k, v in pre_decoder.items()}
+    now_decoder.update(pre_decoder)
+    decoder.load_state_dict(now_decoder)
 
 
 s1 = torch.zeros(1)
@@ -35,32 +45,31 @@ pic = []
 
 encoder = None
 decoder = None
+predictor = None
 
 
 def run(x):
-    global pic, encoder, decoder
-    if x.shape[0]==0:
-        return x
-    if torch.cuda.is_available():
-        x=x.cuda()
+    global pic, encoder, decoder, predictor
     print(x.shape)
-    te = nn.ReflectionPad2d(16)
-    x = te(x)
     x.requires_grad = False
     with torch.no_grad():
         y = encoder(x)
-        pic.append(y.clone())
-        x = decoder(y).detach()
-        x = x[:, :, 16:-16, 16:-16]
+        #p = y.squeeze(0).clone()
+
+        #p = torch.round(p * 255).int()
+        #p = np.array(p, dtype=np.uint8)
+
+        x = decoder(y)
     return x
 
 
-def main(img_path='../../test_.png', base=1024):
-    global s1, s2, num, pic, encoder, decoder
+def main(img_path='../../test_.png', base=256):
+    global s1, s2, num, pic, encoder, decoder, predictor
     num += 1
     encoder = Encoder(out_channels=30)
     decoder = Decoder(out_channels=30)
-    load(encoder, decoder)
+    predictor = Predictor(30)
+    load(encoder, decoder, predictor)
     encoder.eval()
     decoder.eval()
     img = cv2.imread(img_path)
@@ -74,41 +83,12 @@ def main(img_path='../../test_.png', base=1024):
         x = pad(x, base)
     b, c, H, W = x.shape
     x.requires_grad = False
-    y = x.clone()
     if torch.cuda.is_available():
         encoder = encoder.cuda()
         decoder = decoder.cuda()
         x = x.cuda()
-
-    if torch.cuda.is_available():
-        pass
-    z = []
-    for i in range(0, x.shape[2] // base):
-        for j in range(0, x.shape[3] // base):
-            z.append(x[:, :, i * base:(i + 1) * base, j * base:(j + 1) * base])
-
-    z = torch.cat(z, 0)
-    patches = z.shape[0]
-    print(patches)
-
-    z[0:patches // 4, :, :, :] = run(z[0:patches // 4, :, :, :]).detach()
-    z[patches // 4:patches // 2, :, :, :] = run(z[patches // 4:patches // 2, :, :, :]).detach()
-    z[patches // 2:patches * 3 // 4, :, :, :] = run(z[patches // 2:patches * 3 // 4, :, :, :]).detach()
-    z[patches * 3 // 4:patches, :, :, :] = run(z[patches * 3 // 4:patches, :, :, :]).detach()
-
-    """
-    pic = torch.cat(pic, 0) * 255
-    print(pic.shape)
-    pic = pic.reshape(-1, 36*30, 3).int().numpy()
-    cv2.imwrite('test.png', pic)
-    """
-
-    tot = 0
-    for i in range(0, x.shape[2] // base):
-        for j in range(0, x.shape[3] // base):
-            x[:, :, i * base:(i + 1) * base, j * base:(j + 1) * base] = z[tot]
-            tot += 1
-    x=x.cpu()
+    y = x.clone()
+    x = run(x)
     l1 = Lp_Loss.Loss(p=1)
     ss = pytorch_ssim.SSIM(window_size=11)
     psnr = PSNR()
@@ -124,7 +104,7 @@ def main(img_path='../../test_.png', base=1024):
     print(s1 / num, s2 / num)
     x = torch.round(x * 255).int()
     x = torch.abs(x)
-    x = x.detach().numpy()
+    x = x.detach().cpu().numpy()
     x = np.array(x, dtype=np.uint8)
     x = x.squeeze(0)
     x = np.swapaxes(x, 0, 2)
@@ -141,6 +121,4 @@ def test():
 
 
 if __name__ == '__main__':
-    import os
-
     test()

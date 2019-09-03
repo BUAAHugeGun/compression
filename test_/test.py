@@ -1,6 +1,7 @@
 from encoder import Encoder
 from decoder import Decoder
 from torchvision import transforms
+from predict_network import Model as Predictor
 import cv2
 import torch
 import torch.nn as nn
@@ -22,9 +23,11 @@ def pad(x, base=32):
     return y
 
 
-def load(encoder, decoder):
-    encoder.load_state_dict(torch.load('encoder_epoch-1995.pth', map_location='cpu'))
-    decoder.load_state_dict(torch.load('decoder_epoch-1995.pth', map_location='cpu'))
+def load(encoder, decoder, pre=None):
+    encoder.load_state_dict(torch.load('encoder_epoch-170.pth', map_location='cpu'))
+    decoder.load_state_dict(torch.load('decoder_epoch-170.pth', map_location='cpu'))
+    if pre != None:
+        pre.load_state_dict(torch.load('predictor_epoch-170.pth', map_location='cpu'))
 
 
 s1 = torch.zeros(1)
@@ -35,16 +38,19 @@ pic = []
 
 encoder = None
 decoder = None
+predictor = None
 
 
 def run(x):
-    global pic, encoder, decoder
+    global pic, encoder, decoder, predictor
     print(x.shape)
     te = nn.ReflectionPad2d(32)
     x = te(x)
     x.requires_grad = False
     with torch.no_grad():
         y = encoder(x)
+        if predictor != None:
+            y += predictor(y)
         pic.append(y.clone())
         x = decoder(y).detach()
         x = x[:, :, 32:-32, 32:-32]
@@ -52,11 +58,12 @@ def run(x):
 
 
 def main(img_path='../../test_.png', base=256):
-    global s1, s2, num, pic, encoder, decoder
+    global s1, s2, num, pic, encoder, decoder, predictor
     num += 1
-    encoder = Encoder(out_channels=60)
-    decoder = Decoder(out_channels=60)
-    load(encoder, decoder)
+    encoder = Encoder(out_channels=30)
+    decoder = Decoder(out_channels=30)
+    predictor = Predictor(30)
+    load(encoder, decoder, predictor)
     encoder.eval()
     decoder.eval()
     img = cv2.imread(img_path)
@@ -136,15 +143,4 @@ def test():
 
 
 if __name__ == '__main__':
-    import os
-
-    import time
-
-    x=torch.randn(1,3,512,512)
-    encoder=Encoder(out_channels=30)
-    decoder=Decoder(30)
-    if torch.cuda.is_available():
-        encoder=encoder.cuda()
-        decoder=decoder.cuda()
-        x=x.cuda()
-    x=decoder(encoder(x.detach()))
+    main()

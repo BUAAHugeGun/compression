@@ -1,6 +1,7 @@
 from encoder import Encoder
 from decoder import Decoder
 from torchvision import transforms
+from predict_network import Model as Predictor
 import cv2
 import torch
 import torch.nn as nn
@@ -16,15 +17,25 @@ def pad(x, base=32):
     H = (h // base + 1) * base
     W = (w // base + 1) * base
     y = torch.zeros([b, c, H, W])
+    y[:, :, H - h:H, W - w:W] = x.clone()
     if x.dtype == torch.int:
         y = y.int()
-    y[:, :, 0:h, 0:w] += x
+    y[:, :, 0:h, 0:w] = x
     return y
 
 
-def load(encoder, decoder):
-    encoder.load_state_dict(torch.load('encoder_epoch-1995.pth', map_location='cpu'))
-    decoder.load_state_dict(torch.load('decoder_epoch-1995.pth', map_location='cpu'))
+def load(encoder, decoder, pre=None):
+    pre_encoder = torch.load('./encoder_epoch-{}.pth'.format(40), map_location='cpu')
+    now_encoder = encoder.state_dict()
+    pre_encoder = {k[7:]: v for k, v in pre_encoder.items()}
+    now_encoder.update(pre_encoder)
+    encoder.load_state_dict(now_encoder)
+
+    pre_decoder = torch.load('./decoder_epoch-{}.pth'.format(40), map_location='cpu')
+    now_decoder = decoder.state_dict()
+    pre_decoder = {k[7:]: v for k, v in pre_decoder.items()}
+    now_decoder.update(pre_decoder)
+    decoder.load_state_dict(now_decoder)
 
 
 s1 = torch.zeros(1)
@@ -35,28 +46,31 @@ pic = []
 
 encoder = None
 decoder = None
+predictor = None
 
 
 def run(x):
-    global pic, encoder, decoder
+    global pic, encoder, decoder, predictor
     print(x.shape)
-    te = nn.ReflectionPad2d(32)
-    x = te(x)
     x.requires_grad = False
     with torch.no_grad():
         y = encoder(x)
-        pic.append(y.clone())
-        x = decoder(y).detach()
-        x = x[:, :, 32:-32, 32:-32]
+        # p = y.squeeze(0).clone()
+
+        # p = torch.round(p * 255).int()
+        # p = np.array(p, dtype=np.uint8)
+
+        x = decoder(y)
     return x
 
 
-def main(img_path='../../test_.png', base=256):
-    global s1, s2, num, pic, encoder, decoder
+def main(img_path='../../2.png', base=32):
+    global s1, s2, num, pic, encoder, decoder, predictor
     num += 1
-    encoder = Encoder(out_channels=60)
-    decoder = Decoder(out_channels=60)
-    load(encoder, decoder)
+    encoder = Encoder(out_channels=30)
+    decoder = Decoder(out_channels=30)
+    predictor = Predictor(30)
+    load(encoder, decoder, predictor)
     encoder.eval()
     decoder.eval()
     img = cv2.imread(img_path)
@@ -75,35 +89,7 @@ def main(img_path='../../test_.png', base=256):
         decoder = decoder.cuda()
         x = x.cuda()
     y = x.clone()
-
-    if torch.cuda.is_available():
-        pass
-    z = []
-    for i in range(0, x.shape[2] // base):
-        for j in range(0, x.shape[3] // base):
-            z.append(x[:, :, i * base:(i + 1) * base, j * base:(j + 1) * base])
-
-    z = torch.cat(z, 0)
-    patches = z.shape[0]
-    print(patches)
-
-    z[0:patches // 4, :, :, :] = run(z[0:patches // 4, :, :, :]).detach()
-    z[patches // 4:patches // 2, :, :, :] = run(z[patches // 4:patches // 2, :, :, :]).detach()
-    z[patches // 2:patches * 3 // 4, :, :, :] = run(z[patches // 2:patches * 3 // 4, :, :, :]).detach()
-    z[patches * 3 // 4:patches, :, :, :] = run(z[patches * 3 // 4:patches, :, :, :]).detach()
-
-    """
-    pic = torch.cat(pic, 0) * 255
-    print(pic.shape)
-    pic = pic.reshape(-1, 36*30, 3).int().numpy()
-    cv2.imwrite('test.png', pic)
-    """
-
-    tot = 0
-    for i in range(0, x.shape[2] // base):
-        for j in range(0, x.shape[3] // base):
-            x[:, :, i * base:(i + 1) * base, j * base:(j + 1) * base] = z[tot]
-            tot += 1
+    x = run(x)
     l1 = Lp_Loss.Loss(p=1)
     ss = pytorch_ssim.SSIM(window_size=11)
     psnr = PSNR()
@@ -119,13 +105,13 @@ def main(img_path='../../test_.png', base=256):
     print(s1 / num, s2 / num)
     x = torch.round(x * 255).int()
     x = torch.abs(x)
-    x = x.detach().numpy()
+    x = x.detach().cpu().numpy()
     x = np.array(x, dtype=np.uint8)
     x = x.squeeze(0)
     x = np.swapaxes(x, 0, 2)
     x = np.swapaxes(x, 0, 1)
     x = x[0:h, 0:w, :]
-    cv2.imwrite('./out__.png', x)
+    cv2.imwrite('./1.png', x)
 
 
 def test():
@@ -136,13 +122,4 @@ def test():
 
 
 if __name__ == '__main__':
-    import os
-
-    x = torch.randn(1, 3, 2048, 1024)
-    encoder = Encoder(out_channels=30)
-    decoder = Decoder(30)
-    if torch.cuda.is_available():
-        encoder = encoder.cuda()
-        decoder = decoder.cuda()
-        x = x.cuda()
-    x = decoder(encoder(x.detach()))
+    main()

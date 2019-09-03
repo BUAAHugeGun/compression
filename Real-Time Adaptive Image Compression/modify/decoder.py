@@ -4,36 +4,31 @@ import numpy as np
 import math
 
 
-class Encoder(nn.Module):
-    def __init__(self, in_channels=3, M=6, out_channels=60):
-        super(Encoder, self).__init__()
-        self.in_channels = in_channels
+class Decoder(nn.Module):
+    def __init__(self, out_channels=60, M=6):
+        super(Decoder, self).__init__()
         self.out_channels = out_channels
         self.M = M
-        self.build(c=[256, 128, 64, 32, 16, 8])
+        self.build(c=[128, 64, 64, 64, 64, 64])
         self.initial()
 
-    def _conv_layer(self, in_channels, out_channels, kernel, stride, padding, bias=True, bn=True):
+    def _conv_layer(self, in_channels, out_channels, kernel, stride, padding, bias=True, bn=False, k=0):
         layers = []
         layers.append(nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel, stride=stride,
-                                padding=padding, bias=bias, padding_mode='reflection'))
+                                padding=padding, bias=bias))
         if bn:
             layers.append(nn.BatchNorm2d(out_channels))
-        layers.append(nn.LeakyReLU(0))
+        layers.append(nn.LeakyReLU(k))
         return nn.Sequential(*layers)
 
-    def _deconv_layer(self, in_channels, out_channels, kernel, stride, padding, bias=True, bn=True):
+    def _deconv_layer(self, in_channels, out_channels, kernel, stride, padding, bias=True, bn=False, k=0):
         layers = []
-        if padding == 0:
-            output_padding = 0
-        else:
-            output_padding = 1
         layers.append(nn.ConvTranspose2d(
             in_channels=in_channels, out_channels=out_channels, kernel_size=kernel, stride=stride,
-            padding=padding, bias=bias, output_padding=output_padding))
+            padding=padding, bias=bias))
         if bn:
             layers.append(nn.BatchNorm2d(out_channels))
-        layers.append(nn.LeakyReLU(0))
+        layers.append(nn.LeakyReLU(k))
         return nn.Sequential(*layers)
 
     def _pool_layer(self, kernel, stride, padding=0, mode="Avg"):
@@ -45,28 +40,27 @@ class Encoder(nn.Module):
             return nn.Sequential(nn.AvgPool2d(kernel_size=kernel, stride=stride, padding=padding))
 
     def build(self, c):
-        self.d = []
-        self.f = []
-        self.g = []
-        for i in range(0, self.M - 1):
-            self.d.append(nn.Sequential(self._conv_layer(3, 3, 3, 1, 1), self._pool_layer(2, 2, 0)))
-        for i in range(0, 3):
-            f1 = self._conv_layer(3, c[i], 3, 1, 1)
-            f2 = self._conv_layer(c[i], c[i], 3, 1, 1)
-            f3 = self._pool_layer(2, 2, 0)
-            self.f.append(nn.Sequential(f1, f2, f3))
-        for i in range(3, self.M):
-            f1 = self._conv_layer(3, c[i], 3, 1, 1)
-            f2 = self._conv_layer(c[i], c[i], 3, 1, 1)
-            self.f.append(nn.Sequential(f1, f2))
-        channels = self.out_channels // 6
-        self.g.append(nn.Sequential(self._conv_layer(c[0], channels, 3, 1, 1), self._pool_layer(4, 4)))
-        self.g.append(nn.Sequential(self._conv_layer(c[1], channels, 3, 1, 1), self._pool_layer(2, 2)))
-        self.g.append(self._conv_layer(c[2], channels, 3, 1, 1))
-        self.g.append(self._conv_layer(c[3], channels, 3, 1, 1))
-        self.g.append(self._deconv_layer(c[4], channels, 3, 2, 1))
-        self.g.append(self._deconv_layer(c[5], channels, 5, 4, 1))
         self.G = self._conv_layer(self.out_channels, self.out_channels, 3, 1, 1)
+        self.g = []
+        self.f = []
+        self.d = []
+        channels = self.out_channels // 6
+        self.g.append(self._deconv_layer(channels, c[0], 6, 4, 1, k=0.2))
+        self.g.append(self._deconv_layer(channels, c[1], 4, 2, 1, k=0.2))
+        self.g.append(self._conv_layer(channels, c[2], 3, 1, 1, k=0.2))
+        self.g.append(self._conv_layer(channels, c[3], 3, 1, 1, k=0.2))
+        self.g.append(self._conv_layer(channels, c[4], 3, 2, 1, k=0.2))
+        self.g.append(self._conv_layer(channels, c[5], 5, 4, 1, k=0.2))
+        for i in range(0, 3):
+            f1 = self._deconv_layer(c[i], 3, 4, 2, 1)
+            f2 = self._conv_layer(c[i], c[i], 3, 1, 1)
+            self.f.append(nn.Sequential(f2, f1))
+        for i in range(3, self.M):
+            f1 = self._conv_layer(c[i], 3, 3, 1, 1)
+            f2 = self._conv_layer(c[i], c[i], 3, 1, 1)
+            self.f.append(nn.Sequential(f2, f1))
+        for i in range(0, self.M - 1):
+            self.d.append(self._deconv_layer(3, 3, 4, 2, 1))
         self.d_list = nn.Sequential(*self.d)
         self.f_list = nn.Sequential(*self.f)
         self.g_list = nn.Sequential(*self.g)
@@ -86,20 +80,21 @@ class Encoder(nn.Module):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
-    def forward(self, x):
-        dx = []
-        dx.append(x)
-        fx = []
-        gx = []
-        for i in range(0, self.M - 1):
-            dx.append(self.d[i](dx[i]))
+    def forward(self, y):
+        y = self.G(y)
+        gy = []
+        fy = []
+        dy = []
         for i in range(0, self.M):
-            fx.append(self.f[i](dx[i]))
-            gx.append(self.g[i](fx[i]))
-        return self.G(torch.cat(gx, 1))
+            yy = y[:, i * self.out_channels // 6:(i + 1) * self.out_channels // 6, :, :]
+            dy.append(self.f[i](self.g[i](yy)))
+        for i in range(1, self.M):
+            j = self.M - i
+            dy[j - 1] = (dy[j - 1] + self.d[j-1](dy[j])) / 2
+        return dy[0]
 
 
 if __name__ == '__main__':
-    x = torch.randn(2, 3, 128, 128)
-    test = Encoder(3)
+    x = torch.randn(2, 60, 16, 16)
+    test = Decoder()
     print(test(x).shape)

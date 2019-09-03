@@ -5,18 +5,28 @@ import math
 
 
 class Encoder(nn.Module):
-    def __init__(self, in_channels=3, M=6, out_channels=60):
+    def __init__(self, in_channels=3, M=6, out_channels=30):
         super(Encoder, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.M = M
-        self.build(c=[32, 32, 32, 32, 32, 32])
+        self.build(c=[128, 64, 64, 64, 64, 64])
         self.initial()
 
     def _conv_layer(self, in_channels, out_channels, kernel, stride, padding, bias=True, bn=True, k=0):
         layers = []
         layers.append(nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel, stride=stride,
-                                padding=padding, bias=bias, padding_mode='reflection'))
+                                padding=padding, bias=bias))
+        if bn:
+            layers.append(nn.BatchNorm2d(out_channels))
+        layers.append(nn.LeakyReLU(k))
+        return nn.Sequential(*layers)
+
+    def _deconv_layer(self, in_channels, out_channels, kernel, stride, padding, bias=True, bn=True, k=0):
+        layers = []
+        layers.append(nn.ConvTranspose2d(
+            in_channels=in_channels, out_channels=out_channels, kernel_size=kernel, stride=stride,
+            padding=padding, bias=bias))
         if bn:
             layers.append(nn.BatchNorm2d(out_channels))
         layers.append(nn.LeakyReLU(k))
@@ -35,19 +45,20 @@ class Encoder(nn.Module):
         self.f = []
         self.g = []
         for i in range(0, self.M - 1):
-            self.d.append(nn.Sequential(self._conv_layer(3, 3, 3, 1, 1), self._pool_layer(2, 2, 0)))
+            self.d.append(nn.Sequential(
+                self._conv_layer(self.in_channels, self.in_channels, 3, 2, 1)))  # , self._pool_layer(2, 2, 0)))
         for i in range(0, 3):
-            f1 = self._conv_layer(3, c[i], 3, 1, 1)
-            f2 = self._conv_layer(c[i], c[i], 3, 1, 1)
-            f3 = self._pool_layer(2, 2, 0)
-            self.f.append(nn.Sequential(f1, f2, f3))
+            f1 = self._conv_layer(self.in_channels, c[i], 3, 1, 1)
+            f2 = self._conv_layer(c[i], c[i], 4, 2, 1)
+            # f3 = self._pool_layer(2, 2, 0)
+            self.f.append(nn.Sequential(f1, f2))
         for i in range(3, self.M):
-            f1 = self._conv_layer(3, c[i], 3, 1, 1)
+            f1 = self._conv_layer(self.in_channels, c[i], 3, 1, 1)
             f2 = self._conv_layer(c[i], c[i], 3, 1, 1)
             self.f.append(nn.Sequential(f1, f2))
         channels = self.out_channels // 6
-        self.g.append(nn.Sequential(self._conv_layer(c[0], channels, 3, 1, 1, k=0.2), self._pool_layer(4, 4)))
-        self.g.append(nn.Sequential(self._conv_layer(c[1], channels, 3, 1, 1, k=0.2), self._pool_layer(2, 2)))
+        self.g.append(self._conv_layer(c[0], channels, 5, 4, 1, k=0.2))
+        self.g.append(self._conv_layer(c[1], channels, 3, 2, 1, k=0.2))
         self.g.append(self._conv_layer(c[2], channels, 3, 1, 1, k=0.2))
         self.g.append(self._conv_layer(c[3], channels, 3, 1, 1, k=0.2))
         self.g.append(
@@ -77,24 +88,17 @@ class Encoder(nn.Module):
     def forward(self, x):
         dx = []
         dx.append(x)
-        fx = []
         gx = []
         for i in range(0, self.M - 1):
             dx.append(self.d[i](dx[i]))
-        if torch.cuda.is_available():
-            print("encoder: d", torch.cuda.max_memory_allocated())
         for i in range(0, self.M):
-            fx.append(self.f[i](dx[i]))
-        if torch.cuda.is_available():
-            print("encoder: f", torch.cuda.max_memory_allocated())
-        for i in range(0, self.M):
-            gx.append(self.g[i](fx[i]))
-        if torch.cuda.is_available():
-            print("encoder: g", torch.cuda.max_memory_allocated())
+            gx.append(self.g[i](self.f[i](dx[i])))
         return self.G(torch.cat(gx, 1))
 
 
 if __name__ == '__main__':
-    x = torch.randn(2, 3, 2048, 1381)
-    test = Encoder(3)
-    print(test(x).shape)
+    x = torch.randn(1, 1, 1280, 1280 * 2)
+    test = Encoder(1, 6, 30)
+    with torch.no_grad():
+        test.eval()
+        print(test(x).shape)
